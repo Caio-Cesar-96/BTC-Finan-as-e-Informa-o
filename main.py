@@ -31,15 +31,14 @@ def check_password():
 # O que aparece DEPOIS do login
 if check_password():
     st.title("📊 Terminal de Operações")
-    st.markdown("### Bem-vindo de volta, Gestor.")
     st.divider()
     
     st.markdown("Selecione um dos módulos abaixo para iniciar suas alocações e análises de mercado:")
     
     # Botões de navegação grandes e visíveis
-    st.page_link("pages/1_Calculadora.py", label="Calculadora de Margem (Boleta)", icon="🧮")
+    st.page_link("pages/1_Calculadora.py", label="Calculadora de Margem", icon="🧮")
     st.page_link("pages/2_Portfolio.py", label="Portfólio e Custódia", icon="💼")
-    st.page_link("pages/3_Conselho.py", label="O Conselho (Inteligência de Mercado)", icon="🏛️")
+    st.page_link("pages/3_Conselho.py", label="Conselho e Inteligencia de Mercado", icon="🏛️")
     
     st.divider()
     
