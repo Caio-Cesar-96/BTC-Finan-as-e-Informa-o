@@ -1,7 +1,15 @@
 import streamlit as st
 
 # Configuração da página
-st.set_page_config(page_title="O Conselho BTC", page_icon="🏛️", layout="centered")
+st.set_page_config(page_title="O Conselho BTC", page_icon="🏛️", layout="centered", initial_sidebar_state="collapsed")
+
+# Truque em CSS para esconder completamente o menu lateral e o botão de expandir
+st.markdown("""
+    <style>
+        [data-testid="collapsedControl"] {display: none;}
+        [data-testid="stSidebar"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
 
 # Sistema de Segurança
 def check_password():
@@ -38,7 +46,7 @@ if check_password():
     # Botões de navegação grandes e visíveis
     st.page_link("pages/1_Calculadora.py", label="Calculadora de Margem", icon="🧮")
     st.page_link("pages/2_Portfolio.py", label="Portfólio e Custódia", icon="💼")
-    st.page_link("pages/3_Conselho.py", label="Conselho e Inteligencia de Mercado", icon="🏛️")
+    st.page_link("pages/3_Conselho.py", label="Conselho e Inteligência de Mercado", icon="🏛️")
     
     st.divider()
     
