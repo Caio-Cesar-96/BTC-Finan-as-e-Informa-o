@@ -4,29 +4,37 @@ import requests
 # Configuração da página
 st.set_page_config(page_title="O Conselho BTC", page_icon="🏛️", layout="centered", initial_sidebar_state="collapsed")
 
-# Truque em CSS para esconder o menu e refinar os botões
+# Truque em CSS para domar o Streamlit e forçar o tamanho dos botões
 st.markdown("""
     <style>
         /* Esconder o menu lateral na tela inicial */
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
-        /* Estilizar os links: efeito de vidro exato no tamanho do texto */
+        /* Centralizar o bloco inteiro dos botões na tela */
+        [data-testid="stPageLink"] {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+        
+        /* Estilizar os links: Tamanho Fixo, Menor e Centralizado */
         [data-testid="stPageLink-NavLink"] {
-            background-color: rgba(255, 255, 255, 0.03); /* Fundo de vidro bem sutil */
-            border: 1px solid rgba(255, 255, 255, 0.1); /* Borda fininha */
-            border-radius: 10px; 
-            padding: 10px 20px; 
-            margin: 0 auto 12px auto !important; /* Centraliza perfeitamente */
-            width: fit-content !important; /* Faz o botão abraçar apenas o texto */
-            transition: all 0.3s ease; 
+            background-color: rgba(255, 255, 255, 0.05) !important; 
+            border: 1px solid rgba(255, 255, 255, 0.15) !important; 
+            border-radius: 8px !important; 
+            padding: 12px 20px !important; 
+            width: 320px !important; /* TAMANHO FIXO REDUZIDO AQUI */
+            display: flex !important;
+            justify-content: center !important; /* Centraliza o texto e ícone dentro do botão */
+            transition: all 0.3s ease !important; 
         }
         
         /* Efeito Hover quando passa o mouse */
         [data-testid="stPageLink-NavLink"]:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px); /* Leve levantadinha 3D */
+            background-color: rgba(255, 255, 255, 0.15) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            transform: scale(1.02) !important; /* Leve pulsação */
         }
     </style>
 """, unsafe_allow_html=True)
@@ -34,7 +42,7 @@ st.markdown("""
 # Sistema de Segurança
 def check_password():
     def password_guessed():
-        if st.session_state["password"] == "123": # Senha provisória de testes
+        if st.session_state["password"] == "123": 
             st.session_state["password_correct"] = True
             del st.session_state["password"]
         else:
@@ -79,14 +87,14 @@ if check_password():
     
     st.markdown("<p style='text-align: center; margin-bottom: 30px;'>Selecione um dos módulos abaixo para iniciar suas alocações e análises de mercado:</p>", unsafe_allow_html=True)
     
-    # Removidas as colunas: O CSS agora garante que eles fiquem no centro e no tamanho perfeito
+    # Inserindo os botões (O CSS acima vai cuidar de forçar o tamanho e centralizar)
     st.page_link("pages/1_Calculadora.py", label="Calculadora de Margem", icon="🧮")
     st.page_link("pages/2_Portfolio.py", label="Portfólio e Custódia", icon="💼")
     st.page_link("pages/3_Conselho.py", label="Conselho e Inteligência", icon="🏛️")
     
     st.divider()
     
-    # Secção da Cotação ao Vivo (Sem o rótulo extra)
+    # Secção da Cotação ao Vivo
     preco_btc = obter_preco_btc()
     
     if preco_btc:
