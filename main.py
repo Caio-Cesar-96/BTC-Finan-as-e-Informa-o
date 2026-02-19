@@ -11,20 +11,22 @@ st.markdown("""
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
-        /* Estilizar os links para ficarem menores e mais elegantes */
+        /* Estilizar os links: efeito de vidro exato no tamanho do texto */
         [data-testid="stPageLink-NavLink"] {
-            background-color: rgba(128, 128, 128, 0.05); /* Mais transparente */
-            border: 1px solid rgba(128, 128, 128, 0.2); /* Borda bem fina */
-            border-radius: 6px; 
-            padding: 8px 12px; /* Tamanho reduzido para não ficar desproporcional */
-            margin-bottom: 8px;
+            background-color: rgba(255, 255, 255, 0.03); /* Fundo de vidro bem sutil */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Borda fininha */
+            border-radius: 10px; 
+            padding: 10px 20px; 
+            margin: 0 auto 12px auto !important; /* Centraliza perfeitamente */
+            width: fit-content !important; /* Faz o botão abraçar apenas o texto */
             transition: all 0.3s ease; 
         }
         
-        /* Efeito Hover */
+        /* Efeito Hover quando passa o mouse */
         [data-testid="stPageLink-NavLink"]:hover {
-            background-color: rgba(128, 128, 128, 0.15);
-            border: 1px solid rgba(128, 128, 128, 0.5);
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px); /* Leve levantadinha 3D */
         }
     </style>
 """, unsafe_allow_html=True)
@@ -56,14 +58,12 @@ def check_password():
 
 # Função Blindada para buscar o preço do BTC
 def obter_preco_btc():
-    # Tentativa 1: API da Binance US (não bloqueia servidores americanos do Streamlit)
     try:
         url = "https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT"
-        resposta = requests.get(url, timeout=3) # Timeout de 3 seg para não travar o site
+        resposta = requests.get(url, timeout=3) 
         dados = resposta.json()
         return float(dados["price"])
     except:
-        # Tentativa 2: Fallback para a API da CoinGecko caso a Binance caia
         try:
             url_reserva = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
             resposta_reserva = requests.get(url_reserva, timeout=3)
@@ -77,27 +77,20 @@ if check_password():
     st.title("📊 Terminal de Operações")
     st.divider()
     
-    st.markdown("<p style='text-align: center;'>Selecione um dos módulos abaixo para iniciar suas alocações e análises de mercado:</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; margin-bottom: 30px;'>Selecione um dos módulos abaixo para iniciar suas alocações e análises de mercado:</p>", unsafe_allow_html=True)
     
-    # Criando colunas para "espremer" os botões no centro, deixando-os menores e mais chiques
-    col_vazia1, col_botoes, col_vazia2 = st.columns([1, 2, 1])
-    
-    with col_botoes:
-        st.page_link("pages/1_Calculadora.py", label="Calculadora de Margem", icon="🧮")
-        st.page_link("pages/2_Portfolio.py", label="Portfólio e Custódia", icon="💼")
-        st.page_link("pages/3_Conselho.py", label="Conselho e Inteligência", icon="🏛️")
+    # Removidas as colunas: O CSS agora garante que eles fiquem no centro e no tamanho perfeito
+    st.page_link("pages/1_Calculadora.py", label="Calculadora de Margem", icon="🧮")
+    st.page_link("pages/2_Portfolio.py", label="Portfólio e Custódia", icon="💼")
+    st.page_link("pages/3_Conselho.py", label="Conselho e Inteligência", icon="🏛️")
     
     st.divider()
     
-    # Secção da Cotação ao Vivo
+    # Secção da Cotação ao Vivo (Sem o rótulo extra)
     preco_btc = obter_preco_btc()
     
     if preco_btc:
-        st.markdown("<h4 style='text-align: center;'>📡 Cotação Atualizada (BTC/USDT)</h4>", unsafe_allow_html=True)
-        
-        # Centralizando o valor do mercado
-        _, col_preco, _ = st.columns([1, 2, 1])
-        with col_preco:
-            st.metric(label="Mercado Spot", value=f"${preco_btc:,.2f}")
+        st.markdown("<p style='text-align: center; color: gray; margin-bottom: -15px;'>📡 Cotação Atualizada (BTC/USDT)</p>", unsafe_allow_html=True)
+        st.markdown(f"<h1 style='text-align: center; font-size: 3.5rem;'>${preco_btc:,.2f}</h1>", unsafe_allow_html=True)
     else:
         st.error("Sem conexão com o feed de dados do mercado no momento.")
