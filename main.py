@@ -1,56 +1,45 @@
 import streamlit as st
 
-# 1. Configuração de Segurança Simples
+# Configuração da página e ícone da aba do navegador
+st.set_page_config(page_title="O Conselho BTC", page_icon="🏛️", layout="centered")
+
+# Sistema de Segurança
 def check_password():
     def password_guessed():
-        if st.session_state["password"] == "suasenha123": # Altere sua senha aqui
+        if st.session_state["password"] == "123": # Senha de testes rápida
             st.session_state["password_correct"] = True
             del st.session_state["password"]
         else:
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        st.text_input("Senha de Acesso", type="password", on_change=password_guessed, key="password")
+        # Layout elegante para o login
+        st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: gray;'>Identifique-se para acessar o terminal operacional.</p>", unsafe_allow_html=True)
+        
+        st.text_input("Credencial de Acesso", type="password", on_change=password_guessed, key="password")
         return False
+    
     elif not st.session_state["password_correct"]:
-        st.text_input("Senha de Acesso", type="password", on_change=password_guessed, key="password")
-        st.error("Senha incorreta")
+        st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
+        st.text_input("Credencial de Acesso", type="password", on_change=password_guessed, key="password")
+        st.error("Credencial inválida. O Conselho nega a sua entrada.")
         return False
+    
     else:
         return True
 
+# O que aparece DEPOIS que você digita a senha certa
 if check_password():
-    st.title("🛰️ Jornal do BTC - Analista Chefe")
+    st.title("🏛️ Quartel General")
+    st.markdown("### Bem-vindo de volta, Analista Chefe.")
+    st.divider()
     
-    # Menu Lateral
-    menu = st.sidebar.selectbox("Navegação", ["Calculadora Rápida", "O Oráculo (Jornal)", "Meu Portfólio"])
-
-    if menu == "Calculadora Rápida":
-        st.header("🧮 Calculadora de Margem")
+    # Organizando as informações em blocos visuais elegantes
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.info("👈 **Navegação do Sistema**\n\nUtilize o menu lateral para acessar as ferramentas do Conselho, registrar operações na **Calculadora** e consultar seu **Portfólio**.")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            investimento = st.number_input("Quanto você gastou (USDT)?", min_value=0.0, value=10.0)
-            qtd_btc = st.number_input("Quanto BTC você comprou?", min_value=0.0, format="%.8f", value=0.000256)
-        
-        with col2:
-            preco_venda = st.number_input("Preço de venda alvo (USDT)?", min_value=0.0, value=100000.0)
-        
-        valor_final = qtd_btc * preco_venda
-        lucro_bruto = valor_final - investimento
-        margem = (lucro_bruto / investimento) * 100
-
-        st.divider()
-        st.subheader(f"Resultado Estimado")
-        st.write(f"Ao resgatar, você terá: **{valor_final:.2f} USDT**")
-        st.metric("Lucro Líquido", f"{lucro_bruto:.2f} USDT", f"{margem:.2f}%")
-
-    elif menu == "O Oráculo (Jornal)":
-        st.header("📰 Edições do Jornal")
-        st.info("Cole aqui o conteúdo gerado pelo seu Agente Gemini.")
-        # Futuramente, automatizaremos para buscar do seu Drive
-        edicao = st.text_area("Conteúdo da Edição", height=400)
-
-    elif menu == "Meu Portfólio":
-        st.header("💰 Meu Patrimônio")
-        st.write("Seus dados protegidos e integrados ao seu Documento Regente.")
+    with col2:
+        st.success("📡 **Status do Sistema**\n\nConexão segura. Agentes prontos para compilação de dados e análises de mercado.")
