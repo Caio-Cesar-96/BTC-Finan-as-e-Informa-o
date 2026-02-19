@@ -24,7 +24,7 @@ st.markdown("""
             border: 1px solid rgba(255, 255, 255, 0.15) !important; 
             border-radius: 8px !important; 
             padding: 12px 20px !important; 
-            width: 320px !important; /* TAMANHO FIXO REDUZIDO AQUI */
+            width: 100px !important; /* TAMANHO FIXO REDUZIDO AQUI */
             display: flex !important;
             justify-content: center !important; /* Centraliza o texto e ícone dentro do botão */
             transition: all 0.3s ease !important; 
