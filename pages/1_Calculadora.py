@@ -39,7 +39,8 @@ with st.form(key="form_boleta"):
     
     col1, col2 = st.columns(2)
     with col1:
-        tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra (Long)", "Venda (Short / Realização)"])
+        # Ajuste 1 aplicado: Somente Compra e Venda
+        tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
         quantidade = st.number_input("Quantidade de BTC", min_value=0.00000000, format="%.8f", step=0.001)
         
     with col2:
