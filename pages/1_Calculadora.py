@@ -45,8 +45,11 @@ col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 with col_tesouraria:
     st.subheader("🔶 Tesouraria (BNB)")
     
-    # O Segredo está aqui: o parâmetro key="saldo_bnb" amarra a caixa com a memória instantaneamente
-    st.number_input("Saldo Disponível (BNB)", min_value=0.0, step=0.01, format="%.8f", key="saldo_bnb")
+    # CORREÇÃO DO ERRO AQUI: Retiramos o 'key' e voltamos a usar o 'value'. 
+    # O st.rerun() no final do código vai garantir que isso atualize na tela na mesma hora sem travar.
+    novo_saldo = st.number_input("Saldo Disponível (BNB)", min_value=0.0, value=float(st.session_state['saldo_bnb']), step=0.01, format="%.8f")
+    if novo_saldo != st.session_state['saldo_bnb']:
+        st.session_state['saldo_bnb'] = novo_saldo
         
     usar_bnb = st.toggle("Pagar taxas com BNB (-25%)", value=True)
     
@@ -61,7 +64,6 @@ with col_tesouraria:
     else:
         st.caption("Nenhuma taxa deduzida ainda.")
         
-    # Botão salva-vidas para zerar tudo durante a fase de testes
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True):
         st.session_state['transacoes_abertas'] = []
@@ -146,7 +148,6 @@ if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
         cor = "🟢" if "Compra" == t['tipo'] else "🔴"
         
-        # Agora o canhoto mostra a taxa certinha em BNB se você usou BNB
         taxa_display = f"{t['taxa_paga_bnb']:.8f} BNB" if t['taxa_paga_bnb'] > 0 else f"${t['taxa_paga_usdt']:.4f} USDT"
         
         st.info(f"{cor} **{t['tipo']}** | Data: {t['data']} | {t['quantidade_btc']} BTC a ${t['preco_usdt']:,.2f} | Taxa Paga: **{taxa_display}** | Ref: {t['id']}")
