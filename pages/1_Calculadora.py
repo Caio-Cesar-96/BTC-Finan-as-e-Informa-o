@@ -3,10 +3,10 @@ import datetime
 import uuid
 import requests
 
-# 1. Ajuste de Layout: Mudamos de "centered" para "wide" para usar toda a tela do PC
+# Layout "wide" mantido
 st.set_page_config(page_title="Calculadora - O Conselho", page_icon="🧮", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS para esconder o menu lateral e estilizar o botão de voltar
+# CSS para esconder o menu lateral e estilizar o botão
 st.markdown("""
     <style>
         [data-testid="collapsedControl"] {display: none;}
@@ -21,54 +21,52 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Função para buscar o preço atual do BNB (para calcular a conversão da taxa)
+# Função para buscar o preço do BNB
 def obter_preco_bnb():
     try:
         url = "https://api.binance.us/api/v3/ticker/price?symbol=BNBUSDT"
         resposta = requests.get(url, timeout=3)
         return float(resposta.json()["price"])
     except:
-        return 600.0 # Valor de segurança caso a API falhe
+        return 600.0 # Valor reserva caso a API falhe
 
-# Botão para voltar
-st.page_link("main.py", label="Voltar ao Terminal", icon="⬅️")
+# Botão agora aponta para o novo Terminal
+st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="⬅️")
 
 st.title("🧮 Boleta de Operações")
-st.markdown("Registre suas ordens. As taxas em BNB serão calculadas e deduzidas automaticamente.")
 st.divider()
 
-# --- GERENCIAMENTO DE MEMÓRIA (SESSION STATE) ---
+# --- GERENCIAMENTO DE MEMÓRIA ---
 if 'transacoes_abertas' not in st.session_state: st.session_state['transacoes_abertas'] = []
-if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 5.0 # Seu saldo inicial de exemplo
+if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 5.0 
 if 'historico_taxas_bnb' not in st.session_state: st.session_state['historico_taxas_bnb'] = []
 
-# --- ESTRUTURA VISUAL: DIVISÃO DA TELA ---
-# Cria três colunas: Esquerda (Boleta), Meio (Espaço vazio), Direita (Tesouraria)
+# --- DIVISÃO DA TELA ---
 col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 
 # ==========================================
-# COLUNA DA DIREITA: TESOURARIA E TAXAS
+# COLUNA DA DIREITA: TESOURARIA (BNB)
 # ==========================================
 with col_tesouraria:
-    st.subheader("⛽ Tesouraria (BNB)")
-    st.markdown("Gerencie seu combustível de taxas.")
+    # Ajuste visual: Losango para simular a logo da BNB
+    st.subheader("🔶 Tesouraria (BNB)")
     
-    # Campo para você ajustar seu BNB quando quiser
-    novo_saldo = st.number_input("Saldo Disponível (BNB)", min_value=0.0, value=st.session_state['saldo_bnb'], step=0.1, format="%.4f")
+    # Ajuste Matemático: Formatado para 8 casas decimais (padrão cripto)
+    novo_saldo = st.number_input("Saldo Disponível (BNB)", min_value=0.0, value=float(st.session_state['saldo_bnb']), step=0.01, format="%.8f")
     if novo_saldo != st.session_state['saldo_bnb']:
-        st.session_state['saldo_bnb'] = novo_saldo # Atualiza a memória se você digitar um valor novo
+        st.session_state['saldo_bnb'] = novo_saldo 
         
     usar_bnb = st.toggle("Pagar taxas com BNB (-25%)", value=True)
     
     preco_bnb_atual = obter_preco_bnb()
     st.caption(f"📡 Cotação atual BNB/USDT: **${preco_bnb_atual:,.2f}**")
     
-    # Mini histórico lateral separado
     st.markdown("---")
     st.markdown("**📋 Últimos Débitos de Taxa**")
     if st.session_state['historico_taxas_bnb']:
-        for h in reversed(st.session_state['historico_taxas_bnb'][-5:]): # Mostra só os últimos 5
-            st.caption(f"🔻 -{h['qtd_bnb']:.6f} BNB (Ref: {h['id_transacao']})")
+        for h in reversed(st.session_state['historico_taxas_bnb'][-5:]):
+            # Histórico também forçado a exibir 8 casas decimais
+            st.caption(f"🔻 -{h['qtd_bnb']:.8f} BNB (Ref: {h['id_transacao']})")
     else:
         st.caption("Nenhuma taxa deduzida ainda.")
 
@@ -96,27 +94,24 @@ if submit:
         valor_total_usdt = quantidade * preco_execucao
         id_operacao = str(uuid.uuid4())[:8].upper()
         
-        taxa_percentual = 0.100 # Taxa Padrão
+        taxa_percentual = 0.100 
         custo_taxa_usdt = valor_total_usdt * (taxa_percentual / 100)
         
-        # Se escolheu pagar em BNB, fazemos a matemática de conversão e desconto
         if usar_bnb:
             taxa_percentual = 0.075
             custo_taxa_usdt = valor_total_usdt * (taxa_percentual / 100)
             
-            # Converte o custo da taxa de USDT para BNB
+            # Conversão
             custo_taxa_bnb = custo_taxa_usdt / preco_bnb_atual
             
-            # Verifica se tem saldo suficiente
             if st.session_state['saldo_bnb'] >= custo_taxa_bnb:
-                st.session_state['saldo_bnb'] -= custo_taxa_bnb # Tira o valor do saldo
+                st.session_state['saldo_bnb'] -= custo_taxa_bnb 
                 
-                # Guarda o comprovante do débito no mini-histórico lateral
                 st.session_state['historico_taxas_bnb'].append({
                     "id_transacao": id_operacao,
                     "qtd_bnb": custo_taxa_bnb
                 })
-                st.success(f"✅ Ordem registrada! Taxa de {custo_taxa_bnb:.6f} BNB debitada do saldo.")
+                st.success(f"✅ Ordem registrada! Taxa de {custo_taxa_bnb:.8f} BNB debitada do saldo.")
             else:
                 st.warning(f"⚠️ Saldo de BNB insuficiente para a taxa. A ordem foi registrada cobrando a taxa cheia em USDT.")
                 taxa_percentual = 0.100
@@ -124,7 +119,6 @@ if submit:
         else:
             st.success("✅ Ordem registrada com taxa cheia em USDT.")
 
-        # Cria o canhoto principal
         nova_transacao = {
             "id": id_operacao,
             "tipo": tipo_operacao,
@@ -138,7 +132,6 @@ if submit:
         }
         st.session_state['transacoes_abertas'].append(nova_transacao)
         
-        # Esse comando força a tela a piscar rapidinho para atualizar o número do Saldo de BNB ali em cima
         st.rerun() 
         
     else:
