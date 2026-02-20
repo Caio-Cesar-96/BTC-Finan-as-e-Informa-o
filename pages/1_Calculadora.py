@@ -39,13 +39,14 @@ with st.form(key="form_boleta"):
     
     col1, col2 = st.columns(2)
     with col1:
-        # Ajuste 1 aplicado: Somente Compra e Venda
+        # Ajuste 1: Somente Compra e Venda
         tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
         quantidade = st.number_input("Quantidade de BTC", min_value=0.00000000, format="%.8f", step=0.001)
         
     with col2:
         preco_execucao = st.number_input("Preço de Execução (USDT)", min_value=0.0, step=100.0)
-        data_hora = st.date_input("Data da Operação", datetime.date.today())
+        # Ajuste 2: Formato de data PT-BR (DD/MM/YYYY)
+        data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
         
     st.markdown("---")
     st.markdown("### Configuração de Taxas (Binance)")
@@ -89,7 +90,7 @@ st.divider()
 st.subheader("Ordens em Aberto (Cache de Sessão)")
 if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
-        cor = "🟢" if "Compra" in t['tipo'] else "🔴"
+        cor = "🟢" if "Compra" == t['tipo'] else "🔴"
         st.info(f"{cor} **{t['tipo']}** | Data: {t['data']} | {t['quantidade_btc']} BTC a ${t['preco_usdt']:,.2f} | Taxa Paga: ${t['taxa_paga_usdt']:.2f}")
 else:
     st.write("Nenhuma ordem aguardando consolidação.")
