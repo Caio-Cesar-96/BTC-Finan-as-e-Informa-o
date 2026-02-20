@@ -1,10 +1,10 @@
 import streamlit as st
 import requests
 
-# Configuração da página
-st.set_page_config(page_title="O Conselho BTC", page_icon="🏛️", layout="centered", initial_sidebar_state="collapsed")
+# Ajuste rápido feito: layout="wide"
+st.set_page_config(page_title="O Conselho BTC", page_icon="🏛️", layout="wide", initial_sidebar_state="collapsed")
 
-# Truque em CSS para domar o Streamlit e forçar o tamanho dos botões
+# Seu CSS perfeito
 st.markdown("""
     <style>
         /* Esconder o menu lateral na tela inicial */
@@ -24,9 +24,9 @@ st.markdown("""
             border: 1px solid rgba(255, 255, 255, 0.15) !important; 
             border-radius: 1px !important; 
             padding: 1px 4px !important; 
-            width: 250px !important; /* TAMANHO FIXO REDUZIDO AQUI */
+            width: 250px !important; 
             display: flex !important;
-            justify-content: center !important; /* Centraliza o texto e ícone dentro do botão */
+            justify-content: center !important; 
             transition: all 0.3s ease !important; 
         }
         
@@ -34,12 +34,12 @@ st.markdown("""
         [data-testid="stPageLink-NavLink"]:hover {
             background-color: rgba(255, 255, 255, 0.15) !important;
             border: 1px solid rgba(255, 255, 255, 0.4) !important;
-            transform: scale(1.02) !important; /* Leve pulsação */
+            transform: scale(1.02) !important; 
         }
     </style>
 """, unsafe_allow_html=True)
 
-# Sistema de Segurança
+# Sistema de Segurança (Com ajuste para o login não esticar no monitor)
 def check_password():
     def password_guessed():
         if st.session_state["password"] == "123": 
@@ -49,16 +49,20 @@ def check_password():
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: gray;'>Insira sua chave de acesso à mesa de operações.</p>", unsafe_allow_html=True)
-        
-        st.text_input("Chave de Acesso", type="password", on_change=password_guessed, key="password")
+        # Colunas para segurar a caixa de senha no meio da tela
+        _, col_login, _ = st.columns([1, 2, 1])
+        with col_login:
+            st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: gray;'>Insira sua chave de acesso à mesa de operações.</p>", unsafe_allow_html=True)
+            st.text_input("Chave de Acesso", type="password", on_change=password_guessed, key="password")
         return False
     
     elif not st.session_state["password_correct"]:
-        st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
-        st.text_input("Chave de Acesso", type="password", on_change=password_guessed, key="password")
-        st.error("Chave inválida. Acesso negado à tesouraria.")
+        _, col_login, _ = st.columns([1, 2, 1])
+        with col_login:
+            st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
+            st.text_input("Chave de Acesso", type="password", on_change=password_guessed, key="password")
+            st.error("Chave inválida. Acesso negado à tesouraria.")
         return False
     
     else:
@@ -87,7 +91,7 @@ if check_password():
     
     st.markdown("<p style='text-align: center; margin-bottom: 30px;'>Selecione um dos módulos abaixo para iniciar suas alocações e análises de mercado:</p>", unsafe_allow_html=True)
     
-    # Inserindo os botões (O CSS acima vai cuidar de forçar o tamanho e centralizar)
+    # Inserindo os botões (O CSS cuida do resto)
     st.page_link("pages/1_Calculadora.py", label="Calculadora de Margem", icon="🧮")
     st.page_link("pages/2_Portfolio.py", label="Portfólio e Custódia", icon="💼")
     st.page_link("pages/3_Conselho.py", label="Conselho e Inteligência", icon="🏛️")
