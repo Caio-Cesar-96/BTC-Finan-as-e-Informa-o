@@ -34,7 +34,8 @@ st.divider()
 
 # --- GERENCIAMENTO DE MEMÓRIA ---
 if 'transacoes_abertas' not in st.session_state: st.session_state['transacoes_abertas'] = []
-if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 5.0 
+if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 0.0 
+if 'saldo_configurado' not in st.session_state: st.session_state['saldo_configurado'] = False
 if 'historico_taxas_bnb' not in st.session_state: st.session_state['historico_taxas_bnb'] = []
 
 col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
@@ -45,12 +46,23 @@ col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 with col_tesouraria:
     st.subheader("🔶 Tesouraria (BNB)")
     
-    # CORREÇÃO DO ERRO AQUI: Retiramos o 'key' e voltamos a usar o 'value'. 
-    # O st.rerun() no final do código vai garantir que isso atualize na tela na mesma hora sem travar.
-    novo_saldo = st.number_input("Saldo Disponível (BNB)", min_value=0.0, value=float(st.session_state['saldo_bnb']), step=0.01, format="%.8f")
-    if novo_saldo != st.session_state['saldo_bnb']:
-        st.session_state['saldo_bnb'] = novo_saldo
+    # Sistema Novo: Trava de Saldo com Botão "Aplicar"
+    if not st.session_state['saldo_configurado']:
+        st.markdown("Defina o seu saldo inicial reservado para taxas:")
+        # Digite aqui o equivalente aos 5 USDT em BNB (ex: 0.008 BNB)
+        saldo_input = st.number_input("Inserir Saldo (BNB)", min_value=0.0, step=0.001, format="%.8f")
         
+        if st.button("Aplicar Saldo", type="primary", use_container_width=True):
+            st.session_state['saldo_bnb'] = saldo_input
+            st.session_state['saldo_configurado'] = True
+            st.rerun()
+    else:
+        # Mostra o saldo de forma destacada, subtraindo centavinhos a cada transação
+        st.metric(label="Saldo Atual Disponível", value=f"{st.session_state['saldo_bnb']:.8f} BNB")
+        if st.button("⚙️ Reajustar Saldo Inicial", use_container_width=True):
+            st.session_state['saldo_configurado'] = False
+            st.rerun()
+            
     usar_bnb = st.toggle("Pagar taxas com BNB (-25%)", value=True)
     
     preco_bnb_atual = obter_preco_bnb()
@@ -68,7 +80,8 @@ with col_tesouraria:
     if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True):
         st.session_state['transacoes_abertas'] = []
         st.session_state['historico_taxas_bnb'] = []
-        st.session_state['saldo_bnb'] = 5.0
+        st.session_state['saldo_bnb'] = 0.0
+        st.session_state['saldo_configurado'] = False
         st.rerun()
 
 # ==========================================
@@ -105,6 +118,7 @@ if submit:
             
             custo_taxa_bnb = custo_taxa_usdt / preco_bnb_atual
             
+            # Bloqueio de segurança: Só debita se o saldo existir na memória
             if st.session_state['saldo_bnb'] >= custo_taxa_bnb:
                 st.session_state['saldo_bnb'] -= custo_taxa_bnb 
                 
@@ -112,9 +126,9 @@ if submit:
                     "id_transacao": id_operacao,
                     "qtd_bnb": custo_taxa_bnb
                 })
-                st.success(f"✅ Ordem registrada! Taxa de {custo_taxa_bnb:.8f} BNB debitada do saldo.")
+                st.success(f"✅ Ordem registrada! Taxa de {custo_taxa_bnb:.8f} BNB debitada da Tesouraria.")
             else:
-                st.warning(f"⚠️ Saldo de BNB insuficiente para a taxa. A ordem foi registrada cobrando a taxa cheia em USDT.")
+                st.warning("⚠️ Saldo de BNB insuficiente para a taxa. A ordem foi registrada cobrando a taxa cheia em USDT.")
                 taxa_percentual = 0.100
                 custo_taxa_usdt = valor_total_usdt * (taxa_percentual / 100)
                 custo_taxa_bnb = 0.0
@@ -148,8 +162,7 @@ if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
         cor = "🟢" if "Compra" == t['tipo'] else "🔴"
         
-        taxa_display = f"{t['taxa_paga_bnb']:.8f} BNB" if t['taxa_paga_bnb'] > 0 else f"${t['taxa_paga_usdt']:.4f} USDT"
-        
-        st.info(f"{cor} **{t['tipo']}** | Data: {t['data']} | {t['quantidade_btc']} BTC a ${t['preco_usdt']:,.2f} | Taxa Paga: **{taxa_display}** | Ref: {t['id']}")
+        # Ajuste: Removida a informação da taxa do canhoto, deixando-o mais limpo
+        st.info(f"{cor} **{t['tipo']}** | Data: {t['data']} | {t['quantidade_btc']} BTC a ${t['preco_usdt']:,.2f} | Ref: {t['id']}")
 else:
     st.write("Nenhuma ordem aguardando consolidação no momento.")
