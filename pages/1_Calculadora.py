@@ -87,7 +87,7 @@ with col_tesouraria:
         st.caption("Nenhuma taxa deduzida ainda.")
         
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True, key="limpar_tudo"):
+    if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True):
         st.session_state['transacoes_abertas'] = []
         st.session_state['historico_taxas_bnb'] = []
         st.session_state['saldo_bnb'] = 0.0
@@ -95,28 +95,34 @@ with col_tesouraria:
         st.rerun()
 
 with col_boleta:
-    st.subheader("Nova Ordem")
-    
-    # O st.form foi removido para permitir o cálculo ao vivo na tela
-    c1, c2 = st.columns(2)
-    with c1:
-        tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
-        quantidade = st.number_input("Quantidade Bruta de BTC", min_value=0.00000000, format="%.8f", step=0.001)
+    # Agrupamento visual para tirar a sensação de "bugado" e solto
+    with st.container(border=True):
+        st.subheader("Nova Ordem")
         
-    with c2:
-        # Nome ajustado para acabar com a confusão
-        preco_execucao = st.number_input("Cotação de 1 BTC (Preço de Execução)", min_value=0.0, step=100.0)
-        data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
+        c1, c2 = st.columns(2)
+        with c1:
+            tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
+            quantidade = st.number_input("Quantidade Bruta de BTC", min_value=0.00000000, format="%.8f", step=0.001)
+            
+        with c2:
+            preco_execucao = st.number_input("Cotação de 1 BTC (Preço de Execução)", min_value=0.0, step=100.0)
+            data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
+            
+        valor_total_usdt = quantidade * preco_execucao
+        st.info(f"💵 **Valor Total da Operação:** ${valor_total_usdt:,.2f} USDT")
         
-    # Cálculo ao vivo na tela antes de você apertar o botão
-    valor_total_usdt = quantidade * preco_execucao
-    st.info(f"💵 **Valor Total da Operação:** ${valor_total_usdt:,.2f} USDT")
-    
-    # Botão de envio fora do formulário
-    submit = st.button("Executar Ordem e Gerar Canhoto", type="primary", use_container_width=True)
+        # Alerta visual proativo antes de clicar
+        if usar_bnb and not st.session_state['saldo_configurado']:
+            st.warning("⚠️ **Atenção:** O desconto BNB está ativo, mas você ainda não configurou a Tesouraria.")
+
+        submit = st.button("Executar Ordem e Gerar Canhoto", type="primary", use_container_width=True)
 
 if submit:
-    if quantidade > 0 and preco_execucao > 0:
+    # A TRAVA DE SEGURANÇA: Impede a execução se a regra for quebrada
+    if usar_bnb and not st.session_state['saldo_configurado']:
+        st.error("🛑 **Operação Bloqueada:** Você ativou o pagamento em BNB, mas esqueceu de aplicar o saldo na Tesouraria. Por favor, insira o saldo ao lado e clique em 'Aplicar', ou desative a opção de desconto.")
+    
+    elif quantidade > 0 and preco_execucao > 0:
         id_operacao = str(uuid.uuid4())[:8].upper()
         
         taxa_percentual = 0.100 
