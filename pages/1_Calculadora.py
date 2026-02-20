@@ -68,12 +68,19 @@ with col_tesouraria:
             st.rerun()
     
     st.markdown("---")
-    usar_bnb = st.toggle("Pagar taxas com BNB (-25%)", value=True)
     
-    if usar_bnb:
-        st.success("✅ **Desconto Ativo!**\nA taxa será de **0.075%** e debitada da Tesouraria.")
-    else:
-        st.warning("⚠️ **Desconto Desativado.**\nA corretora cobrará a taxa cheia de **0.100%** descontando direto da sua moeda recebida.")
+    # Criando duas colunas para colocar a etiqueta colorida ao lado do botão
+    col_toggle, col_badge = st.columns([3, 2])
+    
+    # O botão agora tem o texto limpo
+    usar_bnb = col_toggle.toggle("Pagar taxas com BNB", value=True)
+    
+    # A etiqueta colorida muda instantaneamente baseada no botão
+    with col_badge:
+        if usar_bnb:
+            st.markdown("<div style='background-color: #15803d; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 2px; width: fit-content;'>0.075%</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='background-color: #eab308; color: black; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 2px; width: fit-content;'>0.100%</div>", unsafe_allow_html=True)
     
     preco_bnb_atual = obter_preco_bnb()
     st.caption(f"📡 Cotação atual BNB/USDT: **{preco_bnb_atual:,.2f} USDT**")
@@ -183,7 +190,6 @@ if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
         cor = "🟢" if "Compra" == t['tipo'] else "🔴"
         
-        # A formatação agora vai funcionar perfeitamente sem o bug dos cifrões
         st.info(f"{cor} **{t['tipo']}** de {t['quantidade_bruta_btc']} BTC a {t['preco_usdt']:,.2f} USDT | **Entrou na Carteira: {t['recebido_liquido']:.8f} {t['moeda_recebida']}** | *{t['info_taxa']}* | Ref: {t['id']}")
 else:
     st.write("Nenhuma ordem aguardando consolidação no momento.")
