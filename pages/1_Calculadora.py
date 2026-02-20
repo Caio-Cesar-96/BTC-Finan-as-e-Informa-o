@@ -104,19 +104,18 @@ with col_boleta:
         c1, c2 = st.columns(2)
         with c1:
             tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
-            # O campo agora pede o valor financeiro direto em Dólares
             valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0)
             
         with c2:
             preco_execucao = st.number_input("Cotação de 1 BTC (Preço de Execução)", min_value=0.0, step=100.0)
             data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
             
-        # O cálculo inverso: acha o BTC a partir do USDT digitado
         quantidade = 0.0
         if preco_execucao > 0:
             quantidade = valor_total_usdt / preco_execucao
             
-        st.info(f"🪙 **Quantidade Bruta Estimada:** {quantidade:.8f} BTC")
+        # O EMOJI FOI REMOVIDO AQUI
+        st.info(f"**Quantidade Bruta Estimada:** {quantidade:.8f} BTC")
         
         if usar_bnb and not st.session_state['saldo_configurado']:
             st.warning("⚠️ **Atenção:** O desconto BNB está ativo, mas você ainda não configurou a Tesouraria.")
