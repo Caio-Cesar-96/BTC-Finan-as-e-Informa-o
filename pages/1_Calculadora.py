@@ -69,13 +69,9 @@ with col_tesouraria:
     
     st.markdown("---")
     
-    # Criando duas colunas para colocar a etiqueta colorida ao lado do botão
     col_toggle, col_badge = st.columns([3, 2])
-    
-    # O botão agora tem o texto limpo
     usar_bnb = col_toggle.toggle("Pagar taxas com BNB", value=True)
     
-    # A etiqueta colorida muda instantaneamente baseada no botão
     with col_badge:
         if usar_bnb:
             st.markdown("<div style='background-color: #15803d; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 2px; width: fit-content;'>0.075%</div>", unsafe_allow_html=True)
@@ -108,14 +104,19 @@ with col_boleta:
         c1, c2 = st.columns(2)
         with c1:
             tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
-            quantidade = st.number_input("Quantidade Bruta de BTC", min_value=0.00000000, format="%.8f", step=0.001)
+            # O campo agora pede o valor financeiro direto em Dólares
+            valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0)
             
         with c2:
             preco_execucao = st.number_input("Cotação de 1 BTC (Preço de Execução)", min_value=0.0, step=100.0)
             data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
             
-        valor_total_usdt = quantidade * preco_execucao
-        st.info(f"💵 **Valor Total da Operação:** {valor_total_usdt:,.2f} USDT")
+        # O cálculo inverso: acha o BTC a partir do USDT digitado
+        quantidade = 0.0
+        if preco_execucao > 0:
+            quantidade = valor_total_usdt / preco_execucao
+            
+        st.info(f"🪙 **Quantidade Bruta Estimada:** {quantidade:.8f} BTC")
         
         if usar_bnb and not st.session_state['saldo_configurado']:
             st.warning("⚠️ **Atenção:** O desconto BNB está ativo, mas você ainda não configurou a Tesouraria.")
@@ -126,7 +127,7 @@ if submit:
     if usar_bnb and not st.session_state['saldo_configurado']:
         st.error("🛑 **Operação Bloqueada:** Você ativou o pagamento em BNB, mas esqueceu de aplicar o saldo na Tesouraria. Por favor, insira o saldo ao lado e clique em 'Aplicar', ou desative a opção de desconto.")
     
-    elif quantidade > 0 and preco_execucao > 0:
+    elif valor_total_usdt > 0 and preco_execucao > 0:
         id_operacao = str(uuid.uuid4())[:8].upper()
         
         taxa_percentual = 0.100 
@@ -181,7 +182,7 @@ if submit:
         st.rerun() 
         
     else:
-        st.error("Atenção: A quantidade e a cotação devem ser maiores que zero.")
+        st.error("Atenção: O valor da operação e a cotação devem ser maiores que zero.")
 
 st.divider()
 
@@ -190,6 +191,6 @@ if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
         cor = "🟢" if "Compra" == t['tipo'] else "🔴"
         
-        st.info(f"{cor} **{t['tipo']}** de {t['quantidade_bruta_btc']} BTC a {t['preco_usdt']:,.2f} USDT | **Entrou na Carteira: {t['recebido_liquido']:.8f} {t['moeda_recebida']}** | *{t['info_taxa']}* | Ref: {t['id']}")
+        st.info(f"{cor} **{t['tipo']}** de {t['quantidade_bruta_btc']:.8f} BTC a {t['preco_usdt']:,.2f} USDT | **Entrou na Carteira: {t['recebido_liquido']:.8f} {t['moeda_recebida']}** | *{t['info_taxa']}* | Ref: {t['id']}")
 else:
     st.write("Nenhuma ordem aguardando consolidação no momento.")
