@@ -87,7 +87,7 @@ with col_tesouraria:
         st.caption("Nenhuma taxa deduzida ainda.")
         
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True):
+    if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True, key="limpar_tudo"):
         st.session_state['transacoes_abertas'] = []
         st.session_state['historico_taxas_bnb'] = []
         st.session_state['saldo_bnb'] = 0.0
@@ -95,23 +95,28 @@ with col_tesouraria:
         st.rerun()
 
 with col_boleta:
-    with st.form(key="form_boleta"):
-        st.subheader("Nova Ordem")
+    st.subheader("Nova Ordem")
+    
+    # O st.form foi removido para permitir o cálculo ao vivo na tela
+    c1, c2 = st.columns(2)
+    with c1:
+        tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
+        quantidade = st.number_input("Quantidade Bruta de BTC", min_value=0.00000000, format="%.8f", step=0.001)
         
-        c1, c2 = st.columns(2)
-        with c1:
-            tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
-            quantidade = st.number_input("Quantidade Bruta de BTC", min_value=0.00000000, format="%.8f", step=0.001)
-            
-        with c2:
-            preco_execucao = st.number_input("Preço de Execução (USDT)", min_value=0.0, step=100.0)
-            data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
-            
-        submit = st.form_submit_button("Executar Ordem e Gerar Canhoto")
+    with c2:
+        # Nome ajustado para acabar com a confusão
+        preco_execucao = st.number_input("Cotação de 1 BTC (Preço de Execução)", min_value=0.0, step=100.0)
+        data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
+        
+    # Cálculo ao vivo na tela antes de você apertar o botão
+    valor_total_usdt = quantidade * preco_execucao
+    st.info(f"💵 **Valor Total da Operação:** ${valor_total_usdt:,.2f} USDT")
+    
+    # Botão de envio fora do formulário
+    submit = st.button("Executar Ordem e Gerar Canhoto", type="primary", use_container_width=True)
 
 if submit:
     if quantidade > 0 and preco_execucao > 0:
-        valor_total_usdt = quantidade * preco_execucao
         id_operacao = str(uuid.uuid4())[:8].upper()
         
         taxa_percentual = 0.100 
@@ -133,24 +138,22 @@ if submit:
                 })
                 st.success(f"✅ Ordem registrada! Taxa debitada da Tesouraria.")
                 
-                # Como pagou em BNB, você recebe a moeda 100% inteira
                 recebido_liquido = quantidade if tipo_operacao == "Compra" else valor_total_usdt
                 info_taxa = "Taxa paga em BNB"
             else:
                 st.warning("⚠️ Saldo de BNB insuficiente. Taxa cheia cobrada na moeda recebida.")
                 taxa_percentual = 0.100
-                usar_bnb = False # Força o cálculo sem BNB abaixo
+                usar_bnb = False 
                 
-        # Esse IF checa se você desligou o botão (ou se o BNB acabou)
         if not usar_bnb:
             st.success("✅ Ordem registrada com taxa cheia na moeda recebida.")
             if tipo_operacao == "Compra":
                 taxa_na_moeda = quantidade * (taxa_percentual / 100)
-                recebido_liquido = quantidade - taxa_na_moeda # Desconta do BTC
+                recebido_liquido = quantidade - taxa_na_moeda 
                 info_taxa = f"Taxa de {taxa_na_moeda:.8f} BTC descontada"
             else:
                 taxa_na_moeda = valor_total_usdt * (taxa_percentual / 100)
-                recebido_liquido = valor_total_usdt - taxa_na_moeda # Desconta do USDT
+                recebido_liquido = valor_total_usdt - taxa_na_moeda 
                 info_taxa = f"Taxa de ${taxa_na_moeda:.2f} descontada"
 
         nova_transacao = {
@@ -168,7 +171,7 @@ if submit:
         st.rerun() 
         
     else:
-        st.error("Atenção: A quantidade e o preço devem ser maiores que zero.")
+        st.error("Atenção: A quantidade e a cotação devem ser maiores que zero.")
 
 st.divider()
 
@@ -177,7 +180,6 @@ if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
         cor = "🟢" if "Compra" == t['tipo'] else "🔴"
         
-        # O novo recibo agora mostra o Bruto, o Líquido (o que realmente cai na conta) e a explicação da taxa.
         st.info(f"{cor} **{t['tipo']}** de {t['quantidade_bruta_btc']} BTC a ${t['preco_usdt']:,.2f} | **Entrou na Carteira: {t['recebido_liquido']:.8f} {t['moeda_recebida']}** | *{t['info_taxa']}* | Ref: {t['id']}")
 else:
     st.write("Nenhuma ordem aguardando consolidação no momento.")
