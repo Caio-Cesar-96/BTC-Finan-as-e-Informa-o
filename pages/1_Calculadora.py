@@ -76,7 +76,7 @@ with col_tesouraria:
         st.warning("⚠️ **Desconto Desativado.**\nA corretora cobrará a taxa cheia de **0.100%** descontando direto da sua moeda recebida.")
     
     preco_bnb_atual = obter_preco_bnb()
-    st.caption(f"📡 Cotação atual BNB/USDT: **${preco_bnb_atual:,.2f}**")
+    st.caption(f"📡 Cotação atual BNB/USDT: **{preco_bnb_atual:,.2f} USDT**")
     
     st.markdown("---")
     st.markdown("**📋 Últimos Débitos de Taxa**")
@@ -95,7 +95,6 @@ with col_tesouraria:
         st.rerun()
 
 with col_boleta:
-    # Agrupamento visual para tirar a sensação de "bugado" e solto
     with st.container(border=True):
         st.subheader("Nova Ordem")
         
@@ -109,16 +108,14 @@ with col_boleta:
             data_hora = st.date_input("Data da Operação", datetime.date.today(), format="DD/MM/YYYY")
             
         valor_total_usdt = quantidade * preco_execucao
-        st.info(f"💵 **Valor Total da Operação:** ${valor_total_usdt:,.2f} USDT")
+        st.info(f"💵 **Valor Total da Operação:** {valor_total_usdt:,.2f} USDT")
         
-        # Alerta visual proativo antes de clicar
         if usar_bnb and not st.session_state['saldo_configurado']:
             st.warning("⚠️ **Atenção:** O desconto BNB está ativo, mas você ainda não configurou a Tesouraria.")
 
         submit = st.button("Executar Ordem e Gerar Canhoto", type="primary", use_container_width=True)
 
 if submit:
-    # A TRAVA DE SEGURANÇA: Impede a execução se a regra for quebrada
     if usar_bnb and not st.session_state['saldo_configurado']:
         st.error("🛑 **Operação Bloqueada:** Você ativou o pagamento em BNB, mas esqueceu de aplicar o saldo na Tesouraria. Por favor, insira o saldo ao lado e clique em 'Aplicar', ou desative a opção de desconto.")
     
@@ -160,7 +157,7 @@ if submit:
             else:
                 taxa_na_moeda = valor_total_usdt * (taxa_percentual / 100)
                 recebido_liquido = valor_total_usdt - taxa_na_moeda 
-                info_taxa = f"Taxa de ${taxa_na_moeda:.2f} descontada"
+                info_taxa = f"Taxa de {taxa_na_moeda:.2f} USDT descontada"
 
         nova_transacao = {
             "id": id_operacao,
@@ -186,6 +183,7 @@ if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
         cor = "🟢" if "Compra" == t['tipo'] else "🔴"
         
-        st.info(f"{cor} **{t['tipo']}** de {t['quantidade_bruta_btc']} BTC a ${t['preco_usdt']:,.2f} | **Entrou na Carteira: {t['recebido_liquido']:.8f} {t['moeda_recebida']}** | *{t['info_taxa']}* | Ref: {t['id']}")
+        # A formatação agora vai funcionar perfeitamente sem o bug dos cifrões
+        st.info(f"{cor} **{t['tipo']}** de {t['quantidade_bruta_btc']} BTC a {t['preco_usdt']:,.2f} USDT | **Entrou na Carteira: {t['recebido_liquido']:.8f} {t['moeda_recebida']}** | *{t['info_taxa']}* | Ref: {t['id']}")
 else:
     st.write("Nenhuma ordem aguardando consolidação no momento.")
