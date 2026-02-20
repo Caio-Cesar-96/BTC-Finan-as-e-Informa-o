@@ -5,13 +5,10 @@ import requests
 
 st.set_page_config(page_title="Calculadora - O Conselho", page_icon="🧮", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS turbinado: Esconde menus e pinta o botão primário com a cor oficial da Binance
 st.markdown("""
     <style>
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
-        
-        /* Botão de Voltar */
         [data-testid="stPageLink-NavLink"] {
             width: fit-content;
             padding: 5px 15px;
@@ -19,8 +16,6 @@ st.markdown("""
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        /* Cor Oficial da Binance (Laranja/Amarelo) para o botão Primário */
         button[kind="primary"] {
             background-color: #F3BA2F !important;
             color: #000000 !important;
@@ -48,7 +43,6 @@ st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="⬅️")
 st.title("🧮 Boleta de Operações")
 st.divider()
 
-# --- GERENCIAMENTO DE MEMÓRIA ---
 if 'transacoes_abertas' not in st.session_state: st.session_state['transacoes_abertas'] = []
 if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 0.0 
 if 'saldo_configurado' not in st.session_state: st.session_state['saldo_configurado'] = False
@@ -56,13 +50,9 @@ if 'historico_taxas_bnb' not in st.session_state: st.session_state['historico_ta
 
 col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 
-# ==========================================
-# COLUNA DA DIREITA: TESOURARIA (BNB)
-# ==========================================
 with col_tesouraria:
     st.subheader("🔶 Tesouraria (BNB)")
     
-    # Trava de Saldo com o novo Botão Laranja (kind="primary")
     if not st.session_state['saldo_configurado']:
         st.markdown("Defina o seu saldo inicial reservado para taxas:")
         saldo_input = st.number_input("Inserir Saldo (BNB)", min_value=0.0, step=0.001, format="%.8f")
@@ -78,14 +68,12 @@ with col_tesouraria:
             st.rerun()
     
     st.markdown("---")
-    
-    # O Toggle agora tem feedback visual imediato
     usar_bnb = st.toggle("Pagar taxas com BNB (-25%)", value=True)
     
     if usar_bnb:
         st.success("✅ **Desconto Ativo!**\nA taxa será de **0.075%** e debitada da Tesouraria.")
     else:
-        st.warning("⚠️ **Desconto Desativado.**\nA corretora cobrará a taxa cheia de **0.100%** diretamente da sua operação (em USDT/BTC).")
+        st.warning("⚠️ **Desconto Desativado.**\nA corretora cobrará a taxa cheia de **0.100%** descontando direto da sua moeda recebida.")
     
     preco_bnb_atual = obter_preco_bnb()
     st.caption(f"📡 Cotação atual BNB/USDT: **${preco_bnb_atual:,.2f}**")
@@ -106,9 +94,6 @@ with col_tesouraria:
         st.session_state['saldo_configurado'] = False
         st.rerun()
 
-# ==========================================
-# COLUNA DA ESQUERDA: FORMULÁRIO DE ORDEM
-# ==========================================
 with col_boleta:
     with st.form(key="form_boleta"):
         st.subheader("Nova Ordem")
@@ -116,7 +101,7 @@ with col_boleta:
         c1, c2 = st.columns(2)
         with c1:
             tipo_operacao = st.selectbox("Tipo de Ordem", ["Compra", "Venda"])
-            quantidade = st.number_input("Quantidade de BTC", min_value=0.00000000, format="%.8f", step=0.001)
+            quantidade = st.number_input("Quantidade Bruta de BTC", min_value=0.00000000, format="%.8f", step=0.001)
             
         with c2:
             preco_execucao = st.number_input("Preço de Execução (USDT)", min_value=0.0, step=100.0)
@@ -124,52 +109,62 @@ with col_boleta:
             
         submit = st.form_submit_button("Executar Ordem e Gerar Canhoto")
 
-# --- LÓGICA DE PROCESSAMENTO ---
 if submit:
     if quantidade > 0 and preco_execucao > 0:
         valor_total_usdt = quantidade * preco_execucao
         id_operacao = str(uuid.uuid4())[:8].upper()
         
         taxa_percentual = 0.100 
-        custo_taxa_usdt = valor_total_usdt * (taxa_percentual / 100)
         custo_taxa_bnb = 0.0
+        recebido_liquido = 0.0
+        moeda_recebida = "BTC" if tipo_operacao == "Compra" else "USDT"
+        info_taxa = ""
         
         if usar_bnb:
             taxa_percentual = 0.075
             custo_taxa_usdt = valor_total_usdt * (taxa_percentual / 100)
-            
             custo_taxa_bnb = custo_taxa_usdt / preco_bnb_atual
             
             if st.session_state['saldo_bnb'] >= custo_taxa_bnb:
                 st.session_state['saldo_bnb'] -= custo_taxa_bnb 
-                
                 st.session_state['historico_taxas_bnb'].append({
                     "id_transacao": id_operacao,
                     "qtd_bnb": custo_taxa_bnb
                 })
-                st.success(f"✅ Ordem registrada! Taxa de {custo_taxa_bnb:.8f} BNB debitada da Tesouraria.")
+                st.success(f"✅ Ordem registrada! Taxa debitada da Tesouraria.")
+                
+                # Como pagou em BNB, você recebe a moeda 100% inteira
+                recebido_liquido = quantidade if tipo_operacao == "Compra" else valor_total_usdt
+                info_taxa = "Taxa paga em BNB"
             else:
-                st.warning("⚠️ Saldo de BNB insuficiente para a taxa. A ordem foi registrada cobrando a taxa cheia em USDT.")
+                st.warning("⚠️ Saldo de BNB insuficiente. Taxa cheia cobrada na moeda recebida.")
                 taxa_percentual = 0.100
-                custo_taxa_usdt = valor_total_usdt * (taxa_percentual / 100)
-                custo_taxa_bnb = 0.0
-        else:
-            st.success("✅ Ordem registrada com taxa cheia de 0.100% (sem desconto).")
+                usar_bnb = False # Força o cálculo sem BNB abaixo
+                
+        # Esse IF checa se você desligou o botão (ou se o BNB acabou)
+        if not usar_bnb:
+            st.success("✅ Ordem registrada com taxa cheia na moeda recebida.")
+            if tipo_operacao == "Compra":
+                taxa_na_moeda = quantidade * (taxa_percentual / 100)
+                recebido_liquido = quantidade - taxa_na_moeda # Desconta do BTC
+                info_taxa = f"Taxa de {taxa_na_moeda:.8f} BTC descontada"
+            else:
+                taxa_na_moeda = valor_total_usdt * (taxa_percentual / 100)
+                recebido_liquido = valor_total_usdt - taxa_na_moeda # Desconta do USDT
+                info_taxa = f"Taxa de ${taxa_na_moeda:.2f} descontada"
 
         nova_transacao = {
             "id": id_operacao,
             "tipo": tipo_operacao,
             "data": data_hora.strftime("%d/%m/%Y"),
-            "quantidade_btc": quantidade,
+            "quantidade_bruta_btc": quantidade,
             "preco_usdt": preco_execucao,
-            "valor_total": valor_total_usdt,
-            "taxa_percentual": taxa_percentual,
-            "taxa_paga_usdt": custo_taxa_usdt,
-            "taxa_paga_bnb": custo_taxa_bnb,
+            "recebido_liquido": recebido_liquido,
+            "moeda_recebida": moeda_recebida,
+            "info_taxa": info_taxa,
             "status": "Aguardando Fechamento"
         }
         st.session_state['transacoes_abertas'].append(nova_transacao)
-        
         st.rerun() 
         
     else:
@@ -177,11 +172,12 @@ if submit:
 
 st.divider()
 
-# --- ÁREA INFERIOR: CANHOTOS ---
 st.subheader("Ordens em Aberto (Cache de Sessão)")
 if st.session_state['transacoes_abertas']:
     for t in st.session_state['transacoes_abertas']:
         cor = "🟢" if "Compra" == t['tipo'] else "🔴"
-        st.info(f"{cor} **{t['tipo']}** | Data: {t['data']} | {t['quantidade_btc']} BTC a ${t['preco_usdt']:,.2f} | Ref: {t['id']}")
+        
+        # O novo recibo agora mostra o Bruto, o Líquido (o que realmente cai na conta) e a explicação da taxa.
+        st.info(f"{cor} **{t['tipo']}** de {t['quantidade_bruta_btc']} BTC a ${t['preco_usdt']:,.2f} | **Entrou na Carteira: {t['recebido_liquido']:.8f} {t['moeda_recebida']}** | *{t['info_taxa']}* | Ref: {t['id']}")
 else:
     st.write("Nenhuma ordem aguardando consolidação no momento.")
