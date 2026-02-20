@@ -27,7 +27,6 @@ st.markdown("""
             background-color: #DDA221 !important;
             transform: scale(1.02) !important;
         }
-        /* Estilização para as Abas ficarem bonitas */
         .stTabs [data-baseweb="tab-list"] {
             gap: 10px;
         }
@@ -59,7 +58,6 @@ st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="⬅️")
 st.title("🧮 Boleta de Operações")
 st.divider()
 
-# --- NOVA ESTRUTURA DE MEMÓRIA (Preparada para os Gráficos Futuros) ---
 if 'lotes_abertos' not in st.session_state: st.session_state['lotes_abertos'] = []
 if 'historico_fechado' not in st.session_state: st.session_state['historico_fechado'] = []
 if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 0.0 
@@ -108,7 +106,6 @@ with col_tesouraria:
         st.rerun()
 
 with col_boleta:
-    # CRIANDO AS ABAS DE NAVEGAÇÃO
     aba_compra, aba_venda = st.tabs(["🛒 Abrir Posição (Compra)", "🎯 Fechar Lote (Venda)"])
     
     # ==========================================
@@ -142,25 +139,27 @@ with col_boleta:
                 elif valor_total_usdt > 0 and preco_execucao > 0:
                     id_operacao = str(uuid.uuid4())[:8].upper()
                     
-                    # Deduzir taxa BNB se ativo
+                    # Salva a taxa de entrada em USDT para o cálculo futuro
+                    taxa_entrada_usdt = valor_total_usdt * (0.00075 if usar_bnb else 0.001)
+                    
                     if usar_bnb:
-                        taxa_usdt = valor_total_usdt * 0.00075
-                        custo_bnb = taxa_usdt / preco_bnb_atual
+                        custo_bnb = taxa_entrada_usdt / preco_bnb_atual
                         if st.session_state['saldo_bnb'] >= custo_bnb:
                             st.session_state['saldo_bnb'] -= custo_bnb 
                             st.session_state['historico_taxas_bnb'].append({"id_transacao": id_operacao, "qtd_bnb": custo_bnb})
                         else:
-                            usar_bnb = False # Falha silenciosa de saldo vai pra taxa cheia
+                            usar_bnb = False
+                            taxa_entrada_usdt = valor_total_usdt * 0.001
                     
-                    # Estrutura de dados perfeita para o futuro Gráfico
                     novo_lote = {
                         "id": id_operacao,
-                        "data_abertura": data_hora.strftime("%Y-%m-%d"), # Formato YYYY-MM-DD é o melhor para gráficos
+                        "data_abertura": data_hora.strftime("%Y-%m-%d"),
                         "hora_abertura": hora_minuto.strftime("%H:%M"),
-                        "data_abertura_br": data_hora.strftime("%d/%m/%Y"), # Para exibir bonito na tela
+                        "data_abertura_br": data_hora.strftime("%d/%m/%Y"), 
                         "valor_investido_usdt": valor_total_usdt,
-                        "quantidade_btc": quantidade if usar_bnb else quantidade - (quantidade * 0.001), # Desconta se não usou BNB
+                        "quantidade_btc": quantidade if usar_bnb else quantidade - (quantidade * 0.001), 
                         "preco_compra": preco_execucao,
+                        "taxa_entrada_usdt": taxa_entrada_usdt, # Guardamos o custo da porta de entrada
                         "status": "Aberto"
                     }
                     st.session_state['lotes_abertos'].append(novo_lote)
@@ -174,8 +173,8 @@ with col_boleta:
             if not st.session_state['lotes_abertos']:
                 st.info("Nenhum lote aberto no momento para realizar fechamento.")
             else:
-                # Cria a lista suspensa com os lotes abertos para você escolher
-                opcoes_lotes = {l["id"]: f"Lote #{l['id']} | Adquirido em {l['data_abertura_br']} | {l['quantidade_btc']:.8f} BTC" for l in st.session_state['lotes_abertos']}
+                # O NOME DO LOTE AGORA MOSTRA O VALOR FINANCEIRO
+                opcoes_lotes = {l["id"]: f"Lote #{l['id']} | Valor: ${l['valor_investido_usdt']:,.2f} USDT | Aberto em {l['data_abertura_br']}" for l in st.session_state['lotes_abertos']}
                 lote_selecionado = st.selectbox("Selecione o Lote para Venda:", options=list(opcoes_lotes.keys()), format_func=lambda x: opcoes_lotes[x])
                 
                 c3, c4 = st.columns(2)
@@ -185,7 +184,6 @@ with col_boleta:
                     data_venda = st.date_input("Data da Venda", datetime.date.today(), format="DD/MM/YYYY")
                     hora_venda = st.time_input("Hora da Venda", datetime.datetime.now().time())
                 
-                # Resgatando os dados do lote escolhido
                 lote_ativo = next(l for l in st.session_state['lotes_abertos'] if l["id"] == lote_selecionado)
                 valor_bruto_venda = lote_ativo['quantidade_btc'] * preco_venda
                 
@@ -198,24 +196,32 @@ with col_boleta:
                     if usar_bnb and not st.session_state['saldo_configurado']:
                         st.error("🛑 Operação Bloqueada: Aplique saldo na Tesouraria.")
                     elif preco_venda > 0:
-                        # Calculo de taxas
+                        taxa_saida_usdt = valor_bruto_venda * (0.00075 if usar_bnb else 0.0010)
+                        
+                        # Soma as taxas da compra e da venda
+                        total_taxas_operacao = lote_ativo.get('taxa_entrada_usdt', 0.0) + taxa_saida_usdt
+                        
                         valor_liquido_recebido = valor_bruto_venda
                         if usar_bnb:
-                            taxa_usdt = valor_bruto_venda * 0.00075
-                            custo_bnb = taxa_usdt / preco_bnb_atual
+                            custo_bnb = taxa_saida_usdt / preco_bnb_atual
                             if st.session_state['saldo_bnb'] >= custo_bnb:
                                 st.session_state['saldo_bnb'] -= custo_bnb 
                                 st.session_state['historico_taxas_bnb'].append({"id_transacao": f"VENDA-{lote_ativo['id']}", "qtd_bnb": custo_bnb})
                             else:
-                                valor_liquido_recebido = valor_bruto_venda - (valor_bruto_venda * 0.0010)
+                                valor_liquido_recebido = valor_bruto_venda - taxa_saida_usdt
                         else:
-                            valor_liquido_recebido = valor_bruto_venda - (valor_bruto_venda * 0.0010)
+                            valor_liquido_recebido = valor_bruto_venda - taxa_saida_usdt
                         
-                        # Calculando o Lucro (PnL)
-                        lucro_usdt = valor_liquido_recebido - lote_ativo['valor_investido_usdt']
+                        # O LUCRO AGORA É 100% LÍQUIDO E SINCERO
+                        if usar_bnb:
+                            # Subtrai o custo do BNB para te dar a realidade do seu bolso
+                            lucro_usdt = valor_liquido_recebido - lote_ativo['valor_investido_usdt'] - total_taxas_operacao
+                        else:
+                            # O valor líquido já foi deduzido da taxa de saída, e a entrada já foi deduzida no BTC recebido
+                            lucro_usdt = valor_liquido_recebido - lote_ativo['valor_investido_usdt']
+                            
                         lucro_pct = (lucro_usdt / lote_ativo['valor_investido_usdt']) * 100
                         
-                        # Completando o Dicionário para ir para o Histórico de Gráficos
                         lote_ativo['status'] = "Fechado"
                         lote_ativo['data_fechamento'] = data_venda.strftime("%Y-%m-%d")
                         lote_ativo['hora_fechamento'] = hora_venda.strftime("%H:%M")
@@ -223,15 +229,14 @@ with col_boleta:
                         lote_ativo['valor_recebido_usdt'] = valor_liquido_recebido
                         lote_ativo['lucro_usdt'] = lucro_usdt
                         lote_ativo['lucro_pct'] = lucro_pct
+                        lote_ativo['total_taxas_usdt'] = total_taxas_operacao # Guarda para o recibo
                         
-                        # Move da gaveta de Abertos para o Histórico Fechado
                         st.session_state['lotes_abertos'].remove(lote_ativo)
                         st.session_state['historico_fechado'].append(lote_ativo)
                         st.rerun()
 
 st.divider()
 
-# --- ÁREA INFERIOR: VISUALIZAÇÃO DOS LOTES ---
 col_abertos, col_fechados = st.columns(2)
 
 with col_abertos:
@@ -245,14 +250,15 @@ with col_abertos:
 with col_fechados:
     st.subheader("🎯 Últimos Lotes Fechados")
     if st.session_state['historico_fechado']:
-        for t in reversed(st.session_state['historico_fechado'][-5:]): # Mostra os 5 últimos
-            cor_lucro = "green" if t['lucro_usdt'] >= 0 else "red"
+        for t in reversed(st.session_state['historico_fechado'][-5:]):
+            cor_lucro = "#16a34a" if t['lucro_usdt'] >= 0 else "#dc2626"
             sinal = "+" if t['lucro_usdt'] >= 0 else ""
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 5px solid {cor_lucro}; margin-bottom: 10px;">
                 <strong>Lote #{t['id']}</strong> concluído<br>
-                <span style="color: gray; font-size: 0.9em;">Aberto em {t['data_abertura_br']} | Fechado em {t['data_fechamento']}</span><br>
-                Resultado Liquido: <strong style="color: {cor_lucro};">{sinal}{t['lucro_usdt']:.2f} USDT ({sinal}{t['lucro_pct']:.2f}%)</strong>
+                <span style="color: gray; font-size: 0.85em;">Aberto em {t['data_abertura_br']} | Fechado em {t['data_fechamento']}</span><br>
+                Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}{t['lucro_usdt']:.2f} USDT ({sinal}{t['lucro_pct']:.2f}%)</strong><br>
+                <span style="color: #9ca3af; font-size: 0.85em;">💸 Total gasto em Taxas: {t['total_taxas_usdt']:.4f} USDT</span>
             </div>
             """, unsafe_allow_html=True)
     else:
