@@ -118,7 +118,6 @@ with col_tesouraria:
         st.rerun()
 
 with col_boleta:
-    # ABAS LIMPAS E PADRONIZADAS
     aba_compra, aba_venda = st.tabs(["🛒 Abrir Ordem", "🎯 Fechar Ordem"])
     
     # ==========================================
@@ -128,22 +127,12 @@ with col_boleta:
         with st.container(border=True):
             preco_btc_atual = obter_preco_btc()
             
-            # Ajuste da proporção das colunas [6, 1] para o botão ficar quadradinho
-            c_preco, c_btn_att = st.columns([6, 1])
-            with c_preco:
-                st.markdown(f"""
-                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
-                        <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
-                    </div>
-                """, unsafe_allow_html=True)
-            with c_btn_att:
-                # Margem calibrada cirurgicamente para alinhar no meio da caixa ao lado
-                st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
-                if st.button("🔄", key="att_compra", help="Atualizar Cotação", use_container_width=True):
-                    st.rerun()
-                    
-            st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
+                    <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
+                </div>
+            """, unsafe_allow_html=True)
 
             c1, c2 = st.columns(2)
             with c1:
@@ -206,21 +195,12 @@ with col_boleta:
             else:
                 preco_btc_atual_venda = obter_preco_btc()
                 
-                # O botão centralizado também na venda
-                c_preco_venda, c_btn_att_venda = st.columns([6, 1])
-                with c_preco_venda:
-                    st.markdown(f"""
-                        <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                            <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
-                            <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual_venda:,.2f}</strong>
-                        </div>
-                    """, unsafe_allow_html=True)
-                with c_btn_att_venda:
-                    st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
-                    if st.button("🔄", key="att_venda", help="Atualizar Cotação", use_container_width=True):
-                        st.rerun()
-                        
-                st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
+                        <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual_venda:,.2f}</strong>
+                    </div>
+                """, unsafe_allow_html=True)
 
                 opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: \${l['valor_investido_usdt']:,.2f}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
@@ -285,7 +265,6 @@ st.divider()
 col_abertos, col_fechados = st.columns(2)
 
 with col_abertos:
-    # LETREIRO LIMPO DE PARÊNTESES
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in st.session_state['ordens_abertas']:
