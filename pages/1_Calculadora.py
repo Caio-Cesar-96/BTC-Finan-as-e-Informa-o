@@ -106,7 +106,8 @@ with col_tesouraria:
             st.markdown("<div style='background-color: #eab308; color: black; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-top: 2px; width: fit-content;'>0.100%</div>", unsafe_allow_html=True)
     
     preco_bnb_atual = obter_preco_bnb()
-    st.caption(f"📡 Cotação atual BNB/USDT: **{preco_bnb_atual:,.2f} USDT**")
+    # Usando escape \$ para renderizar cifrão com segurança
+    st.caption(f"📡 Cotação atual BNB/USDT: **\${preco_bnb_atual:,.2f}**")
         
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True):
@@ -126,10 +127,11 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             preco_btc_atual = obter_preco_btc()
+            # Usando a entidade HTML &#36; para blindar 100% contra o LaTeX
             st.markdown(f"""
                 <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                     <span style="color: #9ca3af; font-size: 0.95em;">₿ Cotação Atual do Bitcoin (BTC/USDT)</span>
-                    <strong style="font-size: 1.3em; color: #F3BA2F;">${preco_btc_atual:,.2f}</strong>
+                    <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
                 </div>
             """, unsafe_allow_html=True)
 
@@ -195,11 +197,11 @@ with col_boleta:
                 st.markdown(f"""
                     <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                         <span style="color: #9ca3af; font-size: 0.95em;">₿ Cotação Atual do Bitcoin (BTC/USDT)</span>
-                        <strong style="font-size: 1.3em; color: #F3BA2F;">${obter_preco_btc():,.2f}</strong>
+                        <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{obter_preco_btc():,.2f}</strong>
                     </div>
                 """, unsafe_allow_html=True)
 
-                opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: ${l['valor_investido_usdt']:,.2f} USDT" for l in st.session_state['ordens_abertas']}
+                opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: ${l['valor_investido_usdt']:,.2f}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 c3, c4 = st.columns(2)
@@ -213,7 +215,7 @@ with col_boleta:
                 valor_bruto_venda = ordem_ativa['quantidade_btc'] * preco_venda
                 
                 if preco_venda > 0:
-                    st.info(f"💵 **Valor Bruto da Venda:** {valor_bruto_venda:,.2f} USDT")
+                    st.info(f"💵 **Valor Bruto da Venda:** \${valor_bruto_venda:,.2f}")
                 
                 submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
                 
@@ -265,7 +267,8 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas (Em Custódia)")
     if st.session_state['ordens_abertas']:
         for t in st.session_state['ordens_abertas']:
-            st.info(f"**Ordem #{t['id']}** | Compra: {t['data_abertura_br']} às {t['hora_abertura']}\n\n{t['quantidade_btc']:.8f} BTC | Custo Total: {t['valor_investido_usdt']:,.2f} USDT | Preço Pago: ${t['preco_compra']:,.2f} | 💸 Taxa: ${t['taxa_entrada_usdt']:.4f}")
+            # Renderizando cifrões com \$ para evitar bug de fonte
+            st.info(f"**Ordem #{t['id']}** | Compra: {t['data_abertura_br']} às {t['hora_abertura']}\n\n{t['quantidade_btc']:.8f} BTC | Custo Total: \${t['valor_investido_usdt']:,.2f} | Preço Pago: \${t['preco_compra']:,.2f} | 💸 Taxa: \${t['taxa_entrada_usdt']:.4f}")
     else:
         st.write("Nenhuma ordem aberta no momento.")
 
@@ -278,9 +281,12 @@ with col_fechados:
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 5px solid {cor_lucro}; margin-bottom: 10px;">
                 <strong>Ordem #{t['id']}</strong> concluída<br>
-                <span style="color: gray; font-size: 0.85em;">Aberta em {t['data_abertura_br']} | Fechada em {t['data_fechamento_br']}</span><br>
-                Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}{t['lucro_usdt']:.2f} USDT ({sinal}{t['lucro_pct']:.2f}%)</strong><br>
-                <span style="color: #9ca3af; font-size: 0.85em;">💸 Total gasto em Taxas: {t['total_taxas_usdt']:.4f} USDT</span>
+                <span style="color: gray; font-size: 0.85em;">
+                    Aberta em {t['data_abertura_br']} às {t['hora_abertura']} Hs<br>
+                    Fechada em {t['data_fechamento_br']} às {t['hora_fechamento']} Hs
+                </span><br>
+                Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t['lucro_usdt']:.2f} ({sinal}{t['lucro_pct']:.2f}%)</strong><br>
+                <span style="color: #9ca3af; font-size: 0.85em;">💸 Total gasto em Taxas: &#36;{t['total_taxas_usdt']:.4f}</span>
             </div>
             """, unsafe_allow_html=True)
     else:
