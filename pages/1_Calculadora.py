@@ -27,16 +27,22 @@ st.markdown("""
             background-color: #DDA221 !important;
             transform: scale(1.02) !important;
         }
-        /* DEIXANDO O BOTÃO DE ATUALIZAR QUADRADINHO E PERFEITO */
-        .btn-refresh [data-testid="stButton"] button {
-            width: 48px !important;
-            height: 48px !important;
+        /* O BOTÃO DE ATUALIZAR AGORA É UM QUADRADO PERFEITO E NATIVO */
+        button[kind="secondary"] {
+            width: 50px !important;
+            height: 50px !important;
             padding: 0 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            margin: 0 auto !important;
             border-radius: 8px !important;
+            background-color: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            transition: all 0.3s ease !important;
+        }
+        button[kind="secondary"]:hover {
+            border-color: #F3BA2F !important;
+            background-color: rgba(255, 255, 255, 0.1) !important;
         }
         .stTabs [data-baseweb="tab-list"] {
             gap: 10px;
@@ -138,21 +144,19 @@ with col_boleta:
         with st.container(border=True):
             preco_btc_atual = obter_preco_btc()
             
-            # O ALINHAMENTO VERTICAL DA COLUNA FAZ A MÁGICA DE CENTRALIZAR O BOTÃO
-            c_preco, c_btn_att = st.columns([9, 1], vertical_alignment="center")
+            c_preco, c_btn_att = st.columns([8, 1], vertical_alignment="center")
             with c_preco:
+                # Altura travada em 50px exatos para espelhar o botão
                 st.markdown(f"""
-                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); height: 50px; padding: 0 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
                         <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
                         <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
                     </div>
                 """, unsafe_allow_html=True)
             with c_btn_att:
-                # Usando o container CSS que criamos para forçar o quadrado 48x48
-                st.markdown('<div class="btn-refresh">', unsafe_allow_html=True)
+                # O botão solto e livre de caixas invisíveis para o centralizador funcionar 100%
                 if st.button("🔄", key="att_compra", help="Atualizar Cotação"):
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
                     
             st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
@@ -217,19 +221,17 @@ with col_boleta:
             else:
                 preco_btc_atual_venda = obter_preco_btc()
                 
-                c_preco_venda, c_btn_att_venda = st.columns([9, 1], vertical_alignment="center")
+                c_preco_venda, c_btn_att_venda = st.columns([8, 1], vertical_alignment="center")
                 with c_preco_venda:
                     st.markdown(f"""
-                        <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); height: 50px; padding: 0 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
                             <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual_venda:,.2f}</strong>
                         </div>
                     """, unsafe_allow_html=True)
                 with c_btn_att_venda:
-                    st.markdown('<div class="btn-refresh">', unsafe_allow_html=True)
                     if st.button("🔄", key="att_venda", help="Atualizar Cotação"):
                         st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
                         
                 st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
@@ -296,7 +298,6 @@ st.divider()
 col_abertos, col_fechados = st.columns(2)
 
 with col_abertos:
-    # TEXTO TOTALMENTE LIMPO
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in st.session_state['ordens_abertas']:
