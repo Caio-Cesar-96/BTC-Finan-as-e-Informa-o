@@ -219,7 +219,8 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: \${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
+                # BARRA INVERTIDA REMOVIDA AQUI
+                opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 c3, c4 = st.columns(2)
@@ -247,11 +248,9 @@ with col_boleta:
                         
                     prev_lucro_pct = (prev_lucro_usdt / ordem_ativa['valor_investido_usdt']) * 100
                     
-                    # Controle dinâmico de cores e sinais para o Preview
                     sinal_prev = "+" if prev_lucro_usdt >= 0 else "-"
                     cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
                     
-                    # CAIXA PADRONIZADA COM A ABA DE COMPRA
                     st.markdown(f"""
                         <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
                             <strong>Valor Bruto da Venda:</strong> &#36;{valor_bruto_venda:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
@@ -354,7 +353,6 @@ if st.session_state['pilha_desfazer']:
             
             if ultima_acao['acao'] == 'compra':
                 st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ultima_acao['id_ordem']]
-                # A TRAVA DE SEGURANÇA QUE IMPEDE NÚMEROS NEGATIVOS OU ZERO
                 st.session_state['contador_ordens'] = max(1, st.session_state['contador_ordens'] - 1) 
                 
                 if ultima_acao['usou_bnb']:
