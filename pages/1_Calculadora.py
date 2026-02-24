@@ -75,7 +75,7 @@ if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 0.0
 if 'saldo_configurado' not in st.session_state: st.session_state['saldo_configurado'] = False
 if 'historico_taxas_bnb' not in st.session_state: st.session_state['historico_taxas_bnb'] = []
 if 'pilha_desfazer' not in st.session_state: st.session_state['pilha_desfazer'] = []
-if 'contador_ordens' not in st.session_state: st.session_state['contador_ordens'] = 1 # NOVO CÉREBRO DE NUMERAÇÃO
+if 'contador_ordens' not in st.session_state: st.session_state['contador_ordens'] = 1 
 
 col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 
@@ -117,7 +117,7 @@ with col_tesouraria:
         st.session_state['saldo_bnb'] = 0.0
         st.session_state['saldo_configurado'] = False
         st.session_state['pilha_desfazer'] = []
-        st.session_state['contador_ordens'] = 1 # Zera a contagem ao limpar
+        st.session_state['contador_ordens'] = 1 
         st.rerun()
 
 with col_boleta:
@@ -147,7 +147,6 @@ with col_boleta:
             if preco_execucao > 0:
                 quantidade = valor_total_usdt / preco_execucao
                 
-            # Caixa HTML blindada para a Quantidade Bruta (resolve o quadradinho com erro de ícone)
             st.markdown(f"""
                 <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
                     <strong>Quantidade Bruta Estimada:</strong> {quantidade:.8f} BTC
@@ -163,7 +162,6 @@ with col_boleta:
                 if usar_bnb and not st.session_state['saldo_configurado']:
                     st.error("🛑 Operação Bloqueada: Aplique saldo na Tesouraria ou desative o desconto.")
                 elif valor_total_usdt > 0 and preco_execucao > 0:
-                    # GERAÇÃO DA NUMERAÇÃO SEQUENCIAL (Ex: 001, 002)
                     id_operacao = f"{st.session_state['contador_ordens']:03d}"
                     st.session_state['contador_ordens'] += 1
                     
@@ -221,8 +219,7 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # NOME DA ORDEM INSERIDO NOVAMENTE, SEM BARRA INVERTIDA NO CIFRÃO, COM SEPARADOR |
-                opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
+                opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: \${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 c3, c4 = st.columns(2)
@@ -249,10 +246,17 @@ with col_boleta:
                         prev_lucro_usdt -= prev_total_taxas
                         
                     prev_lucro_pct = (prev_lucro_usdt / ordem_ativa['valor_investido_usdt']) * 100
-                    sinal_prev = "+" if prev_lucro_usdt >= 0 else ""
                     
-                    # Cifrão protegido e divisor | aplicado conforme solicitado
-                    st.info(f"**Valor Bruto da Venda:** \${valor_bruto_venda:,.2f} | **{sinal_prev}\${prev_lucro_usdt:,.2f} ({sinal_prev}{prev_lucro_pct:,.2f}%)**", icon="💵")
+                    # Controle dinâmico de cores e sinais para o Preview
+                    sinal_prev = "+" if prev_lucro_usdt >= 0 else "-"
+                    cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
+                    
+                    # CAIXA PADRONIZADA COM A ABA DE COMPRA
+                    st.markdown(f"""
+                        <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
+                            <strong>Valor Bruto da Venda:</strong> &#36;{valor_bruto_venda:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
+                        </div>
+                    """, unsafe_allow_html=True)
                 
                 submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
                 
@@ -317,7 +321,6 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in st.session_state['ordens_abertas']:
-            # Removido Emojis extras e deixada a data limpa na primeira linha
             st.info(f"**Ordem #{t['id']}** | {t['data_abertura_br']} às {t['hora_abertura']}\n\n{t['quantidade_btc']:.8f} BTC | Custo Total: \${t['valor_investido_usdt']:,.2f} | Preço Pago: \${t['preco_compra']:,.2f} | Taxa: \${t['taxa_entrada_usdt']:.4f}")
     else:
         st.write("Nenhuma ordem aberta no momento.")
@@ -351,7 +354,9 @@ if st.session_state['pilha_desfazer']:
             
             if ultima_acao['acao'] == 'compra':
                 st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ultima_acao['id_ordem']]
-                st.session_state['contador_ordens'] -= 1 # Volta o contador para evitar furos na numeração!
+                # A TRAVA DE SEGURANÇA QUE IMPEDE NÚMEROS NEGATIVOS OU ZERO
+                st.session_state['contador_ordens'] = max(1, st.session_state['contador_ordens'] - 1) 
+                
                 if ultima_acao['usou_bnb']:
                     st.session_state['saldo_bnb'] += ultima_acao['custo_bnb']
                     st.session_state['historico_taxas_bnb'] = [t for t in st.session_state['historico_taxas_bnb'] if t['id_transacao'] != ultima_acao['id_ordem']]
