@@ -2,6 +2,7 @@ import streamlit as st
 import datetime
 import uuid
 import requests
+import copy
 
 st.set_page_config(page_title="Calculadora - O Conselho", page_icon="🧮", layout="wide", initial_sidebar_state="collapsed")
 
@@ -75,6 +76,7 @@ if 'historico_fechado' not in st.session_state: st.session_state['historico_fech
 if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 0.0 
 if 'saldo_configurado' not in st.session_state: st.session_state['saldo_configurado'] = False
 if 'historico_taxas_bnb' not in st.session_state: st.session_state['historico_taxas_bnb'] = []
+if 'pilha_desfazer' not in st.session_state: st.session_state['pilha_desfazer'] = [] # O cérebro do botão Desfazer
 
 col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 
@@ -107,15 +109,6 @@ with col_tesouraria:
     
     preco_bnb_atual = obter_preco_bnb()
     st.caption(f"📡 Cotação atual BNB/USDT: **\${preco_bnb_atual:,.2f}**")
-        
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True):
-        st.session_state['ordens_abertas'] = []
-        st.session_state['historico_fechado'] = []
-        st.session_state['historico_taxas_bnb'] = []
-        st.session_state['saldo_bnb'] = 0.0
-        st.session_state['saldo_configurado'] = False
-        st.rerun()
 
 with col_boleta:
     aba_compra, aba_venda = st.tabs(["🛒 Abrir Ordem", "🎯 Fechar Ordem"])
@@ -127,7 +120,6 @@ with col_boleta:
         with st.container(border=True):
             preco_btc_atual = obter_preco_btc()
             
-            # Painel limpo sem botão
             st.markdown(f"""
                 <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                     <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
@@ -157,16 +149,18 @@ with col_boleta:
                     st.error("🛑 Operação Bloqueada: Aplique saldo na Tesouraria ou desative o desconto.")
                 elif valor_total_usdt > 0 and preco_execucao > 0:
                     id_operacao = str(uuid.uuid4())[:8].upper()
-                    
                     agora = datetime.datetime.now(fuso_brasilia)
                     
                     taxa_entrada_usdt = valor_total_usdt * (0.00075 if usar_bnb else 0.001)
+                    usou_bnb_real = False
+                    custo_bnb = 0.0
                     
                     if usar_bnb:
                         custo_bnb = taxa_entrada_usdt / preco_bnb_atual
                         if st.session_state['saldo_bnb'] >= custo_bnb:
                             st.session_state['saldo_bnb'] -= custo_bnb 
                             st.session_state['historico_taxas_bnb'].append({"id_transacao": id_operacao, "qtd_bnb": custo_bnb})
+                            usou_bnb_real = True
                         else:
                             usar_bnb = False
                             taxa_entrada_usdt = valor_total_usdt * 0.001
@@ -183,6 +177,14 @@ with col_boleta:
                         "status": "Aberto"
                     }
                     st.session_state['ordens_abertas'].append(nova_ordem)
+                    
+                    # Salvando na Pilha de Desfazer
+                    st.session_state['pilha_desfazer'].append({
+                        'acao': 'compra',
+                        'id_ordem': id_operacao,
+                        'usou_bnb': usou_bnb_real,
+                        'custo_bnb': custo_bnb
+                    })
                     st.rerun()
 
     # ==========================================
@@ -195,7 +197,6 @@ with col_boleta:
             else:
                 preco_btc_atual_venda = obter_preco_btc()
                 
-                # Painel limpo sem botão
                 st.markdown(f"""
                     <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                         <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
@@ -224,28 +225,32 @@ with col_boleta:
                     if usar_bnb and not st.session_state['saldo_configurado']:
                         st.error("🛑 Operação Bloqueada: Aplique saldo na Tesouraria.")
                     elif preco_venda > 0:
-                        taxa_saida_usdt = valor_bruto_venda * (0.00075 if usar_bnb else 0.0010)
+                        # Backup perfeito da ordem antes de ser modificada para caso o usuário clique em Desfazer
+                        ordem_original = copy.deepcopy(ordem_ativa)
                         
+                        taxa_saida_usdt = valor_bruto_venda * (0.00075 if usar_bnb else 0.0010)
                         total_taxas_operacao = ordem_ativa.get('taxa_entrada_usdt', 0.0) + taxa_saida_usdt
                         
                         valor_liquido_recebido = valor_bruto_venda
+                        usou_bnb_real_venda = False
+                        custo_bnb_venda = 0.0
+                        
                         if usar_bnb:
-                            custo_bnb = taxa_saida_usdt / preco_bnb_atual
-                            if st.session_state['saldo_bnb'] >= custo_bnb:
-                                st.session_state['saldo_bnb'] -= custo_bnb 
-                                st.session_state['historico_taxas_bnb'].append({"id_transacao": f"VENDA-{ordem_ativa['id']}", "qtd_bnb": custo_bnb})
+                            custo_bnb_venda = taxa_saida_usdt / preco_bnb_atual
+                            if st.session_state['saldo_bnb'] >= custo_bnb_venda:
+                                st.session_state['saldo_bnb'] -= custo_bnb_venda 
+                                st.session_state['historico_taxas_bnb'].append({"id_transacao": f"VENDA-{ordem_ativa['id']}", "qtd_bnb": custo_bnb_venda})
+                                usou_bnb_real_venda = True
                             else:
                                 valor_liquido_recebido = valor_bruto_venda - taxa_saida_usdt
                         else:
                             valor_liquido_recebido = valor_bruto_venda - taxa_saida_usdt
                         
+                        lucro_usdt = valor_liquido_recebido - ordem_ativa['valor_investido_usdt']
                         if usar_bnb:
-                            lucro_usdt = valor_liquido_recebido - ordem_ativa['valor_investido_usdt'] - total_taxas_operacao
-                        else:
-                            lucro_usdt = valor_liquido_recebido - ordem_ativa['valor_investido_usdt']
+                            lucro_usdt -= total_taxas_operacao
                             
                         lucro_pct = (lucro_usdt / ordem_ativa['valor_investido_usdt']) * 100
-                        
                         agora_venda = datetime.datetime.now(fuso_brasilia)
                         
                         ordem_ativa['status'] = "Fechado"
@@ -258,8 +263,18 @@ with col_boleta:
                         ordem_ativa['lucro_pct'] = lucro_pct
                         ordem_ativa['total_taxas_usdt'] = total_taxas_operacao
                         
-                        st.session_state['ordens_abertas'].remove(ordem_ativa)
+                        # Remove a antiga aberta e coloca na lista de fechadas
+                        st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
                         st.session_state['historico_fechado'].append(ordem_ativa)
+                        
+                        # Salvando na Pilha de Desfazer
+                        st.session_state['pilha_desfazer'].append({
+                            'acao': 'venda',
+                            'ordem_restaurada': ordem_original,
+                            'usou_bnb': usou_bnb_real_venda,
+                            'custo_bnb': custo_bnb_venda,
+                            'id_ordem': ordem_ativa['id']
+                        })
                         st.rerun()
 
 st.divider()
@@ -293,3 +308,28 @@ with col_fechados:
             """, unsafe_allow_html=True)
     else:
         st.write("Nenhuma venda realizada ainda.")
+
+# ==========================================
+# BOTÃO DE DESFAZER AÇÃO (NO RODAPÉ)
+# ==========================================
+if st.session_state['pilha_desfazer']:
+    st.markdown("<br>", unsafe_allow_html=True)
+    c_empty, c_undo = st.columns([8, 2])
+    with c_undo:
+        if st.button("↩️ Desfazer Última Ação", use_container_width=True):
+            ultima_acao = st.session_state['pilha_desfazer'].pop()
+            
+            if ultima_acao['acao'] == 'compra':
+                st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ultima_acao['id_ordem']]
+                if ultima_acao['usou_bnb']:
+                    st.session_state['saldo_bnb'] += ultima_acao['custo_bnb']
+                    st.session_state['historico_taxas_bnb'] = [t for t in st.session_state['historico_taxas_bnb'] if t['id_transacao'] != ultima_acao['id_ordem']]
+                    
+            elif ultima_acao['acao'] == 'venda':
+                st.session_state['historico_fechado'] = [o for o in st.session_state['historico_fechado'] if o['id'] != ultima_acao['id_ordem']]
+                st.session_state['ordens_abertas'].append(ultima_acao['ordem_restaurada'])
+                if ultima_acao['usou_bnb']:
+                    st.session_state['saldo_bnb'] += ultima_acao['custo_bnb']
+                    st.session_state['historico_taxas_bnb'] = [t for t in st.session_state['historico_taxas_bnb'] if t['id_transacao'] != f"VENDA-{ultima_acao['id_ordem']}"]
+            
+            st.rerun()
