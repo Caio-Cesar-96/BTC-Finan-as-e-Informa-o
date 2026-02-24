@@ -203,7 +203,8 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                opcoes_ordens = {l["id"]: f"Valor: \${l['valor_investido_usdt']:,.2f} / Data {l['data_abertura_br']} - {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
+                # RÓTULO DO SELECTBOX CORRIGIDO (SEM BARRA INVERTIDA E COM SEPARADOR MAIS LIMPO)
+                opcoes_ordens = {l["id"]: f"Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 c3, c4 = st.columns(2)
@@ -215,7 +216,6 @@ with col_boleta:
                 ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
                 valor_bruto_venda = ordem_ativa['quantidade_btc'] * preco_venda
                 
-                # CÁLCULO DE PREVIEW DA VENDA
                 if preco_venda > 0:
                     prev_taxa_saida = valor_bruto_venda * (0.00075 if usar_bnb else 0.0010)
                     prev_total_taxas = ordem_ativa.get('taxa_entrada_usdt', 0.0) + prev_taxa_saida
@@ -233,7 +233,6 @@ with col_boleta:
                     prev_lucro_pct = (prev_lucro_usdt / ordem_ativa['valor_investido_usdt']) * 100
                     sinal_prev = "+" if prev_lucro_usdt >= 0 else ""
                     
-                    # Exibindo o preview na tela!
                     st.info(f"💵 **Valor Bruto da Venda:** \${valor_bruto_venda:,.2f} / **{sinal_prev}\${prev_lucro_usdt:,.2f} ({sinal_prev}{prev_lucro_pct:,.2f}%)**")
                 
                 submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
