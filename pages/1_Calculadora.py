@@ -1,6 +1,5 @@
 import streamlit as st
 import datetime
-import uuid
 import requests
 import copy
 
@@ -63,7 +62,6 @@ def obter_preco_btc():
     except:
         return 65000.0
 
-# --- FUSO HORÁRIO (BRASÍLIA) ---
 fuso_brasilia = datetime.timezone(datetime.timedelta(hours=-3))
 
 st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="⬅️")
@@ -77,6 +75,7 @@ if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 0.0
 if 'saldo_configurado' not in st.session_state: st.session_state['saldo_configurado'] = False
 if 'historico_taxas_bnb' not in st.session_state: st.session_state['historico_taxas_bnb'] = []
 if 'pilha_desfazer' not in st.session_state: st.session_state['pilha_desfazer'] = []
+if 'contador_ordens' not in st.session_state: st.session_state['contador_ordens'] = 1 # NOVO CÉREBRO DE NUMERAÇÃO
 
 col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 
@@ -109,6 +108,17 @@ with col_tesouraria:
     
     preco_bnb_atual = obter_preco_bnb()
     st.caption(f"📡 Cotação atual BNB/USDT: **\${preco_bnb_atual:,.2f}**")
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🗑️ Limpar Histórico de Testes", use_container_width=True):
+        st.session_state['ordens_abertas'] = []
+        st.session_state['historico_fechado'] = []
+        st.session_state['historico_taxas_bnb'] = []
+        st.session_state['saldo_bnb'] = 0.0
+        st.session_state['saldo_configurado'] = False
+        st.session_state['pilha_desfazer'] = []
+        st.session_state['contador_ordens'] = 1 # Zera a contagem ao limpar
+        st.rerun()
 
 with col_boleta:
     aba_compra, aba_venda = st.tabs(["🛒 Abrir Ordem", "🎯 Fechar Ordem"])
@@ -137,7 +147,12 @@ with col_boleta:
             if preco_execucao > 0:
                 quantidade = valor_total_usdt / preco_execucao
                 
-            st.info(f"**Quantidade Bruta Estimada:** {quantidade:.8f} BTC")
+            # Caixa HTML blindada para a Quantidade Bruta (resolve o quadradinho com erro de ícone)
+            st.markdown(f"""
+                <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
+                    <strong>Quantidade Bruta Estimada:</strong> {quantidade:.8f} BTC
+                </div>
+            """, unsafe_allow_html=True)
             
             if usar_bnb and not st.session_state['saldo_configurado']:
                 st.warning("⚠️ **Atenção:** O desconto BNB está ativo, mas você ainda não configurou a Tesouraria.")
@@ -148,7 +163,10 @@ with col_boleta:
                 if usar_bnb and not st.session_state['saldo_configurado']:
                     st.error("🛑 Operação Bloqueada: Aplique saldo na Tesouraria ou desative o desconto.")
                 elif valor_total_usdt > 0 and preco_execucao > 0:
-                    id_operacao = str(uuid.uuid4())[:8].upper()
+                    # GERAÇÃO DA NUMERAÇÃO SEQUENCIAL (Ex: 001, 002)
+                    id_operacao = f"{st.session_state['contador_ordens']:03d}"
+                    st.session_state['contador_ordens'] += 1
+                    
                     agora = datetime.datetime.now(fuso_brasilia)
                     
                     taxa_entrada_usdt = valor_total_usdt * (0.00075 if usar_bnb else 0.001)
@@ -203,8 +221,8 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # RÓTULO DO SELECTBOX CORRIGIDO (SEM BARRA INVERTIDA E COM SEPARADOR MAIS LIMPO)
-                opcoes_ordens = {l["id"]: f"Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
+                # NOME DA ORDEM INSERIDO NOVAMENTE, SEM BARRA INVERTIDA NO CIFRÃO, COM SEPARADOR |
+                opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 c3, c4 = st.columns(2)
@@ -233,7 +251,8 @@ with col_boleta:
                     prev_lucro_pct = (prev_lucro_usdt / ordem_ativa['valor_investido_usdt']) * 100
                     sinal_prev = "+" if prev_lucro_usdt >= 0 else ""
                     
-                    st.info(f"💵 **Valor Bruto da Venda:** \${valor_bruto_venda:,.2f} / **{sinal_prev}\${prev_lucro_usdt:,.2f} ({sinal_prev}{prev_lucro_pct:,.2f}%)**")
+                    # Cifrão protegido e divisor | aplicado conforme solicitado
+                    st.info(f"**Valor Bruto da Venda:** \${valor_bruto_venda:,.2f} | **{sinal_prev}\${prev_lucro_usdt:,.2f} ({sinal_prev}{prev_lucro_pct:,.2f}%)**", icon="💵")
                 
                 submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
                 
@@ -298,6 +317,7 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in st.session_state['ordens_abertas']:
+            # Removido Emojis extras e deixada a data limpa na primeira linha
             st.info(f"**Ordem #{t['id']}** | {t['data_abertura_br']} às {t['hora_abertura']}\n\n{t['quantidade_btc']:.8f} BTC | Custo Total: \${t['valor_investido_usdt']:,.2f} | Preço Pago: \${t['preco_compra']:,.2f} | Taxa: \${t['taxa_entrada_usdt']:.4f}")
     else:
         st.write("Nenhuma ordem aberta no momento.")
@@ -331,6 +351,7 @@ if st.session_state['pilha_desfazer']:
             
             if ultima_acao['acao'] == 'compra':
                 st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ultima_acao['id_ordem']]
+                st.session_state['contador_ordens'] -= 1 # Volta o contador para evitar furos na numeração!
                 if ultima_acao['usou_bnb']:
                     st.session_state['saldo_bnb'] += ultima_acao['custo_bnb']
                     st.session_state['historico_taxas_bnb'] = [t for t in st.session_state['historico_taxas_bnb'] if t['id_transacao'] != ultima_acao['id_ordem']]
