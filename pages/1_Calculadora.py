@@ -76,7 +76,7 @@ if 'historico_fechado' not in st.session_state: st.session_state['historico_fech
 if 'saldo_bnb' not in st.session_state: st.session_state['saldo_bnb'] = 0.0 
 if 'saldo_configurado' not in st.session_state: st.session_state['saldo_configurado'] = False
 if 'historico_taxas_bnb' not in st.session_state: st.session_state['historico_taxas_bnb'] = []
-if 'pilha_desfazer' not in st.session_state: st.session_state['pilha_desfazer'] = [] # O cérebro do botão Desfazer
+if 'pilha_desfazer' not in st.session_state: st.session_state['pilha_desfazer'] = []
 
 col_boleta, col_espaco, col_tesouraria = st.columns([5, 1, 3])
 
@@ -178,7 +178,6 @@ with col_boleta:
                     }
                     st.session_state['ordens_abertas'].append(nova_ordem)
                     
-                    # Salvando na Pilha de Desfazer
                     st.session_state['pilha_desfazer'].append({
                         'acao': 'compra',
                         'id_ordem': id_operacao,
@@ -204,7 +203,7 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                opcoes_ordens = {l["id"]: f"Valor: ${l['valor_investido_usdt']:,.2f} / Data {l['data_abertura_br']} - {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
+                opcoes_ordens = {l["id"]: f"Valor: \${l['valor_investido_usdt']:,.2f} / Data {l['data_abertura_br']} - {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 c3, c4 = st.columns(2)
@@ -216,8 +215,26 @@ with col_boleta:
                 ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
                 valor_bruto_venda = ordem_ativa['quantidade_btc'] * preco_venda
                 
+                # CÁLCULO DE PREVIEW DA VENDA
                 if preco_venda > 0:
-                    st.info(f"💵 **Valor Bruto da Venda:** \${valor_bruto_venda:,.2f}")
+                    prev_taxa_saida = valor_bruto_venda * (0.00075 if usar_bnb else 0.0010)
+                    prev_total_taxas = ordem_ativa.get('taxa_entrada_usdt', 0.0) + prev_taxa_saida
+                    
+                    simula_usar_bnb = usar_bnb and st.session_state['saldo_configurado'] and st.session_state['saldo_bnb'] >= (prev_taxa_saida / preco_bnb_atual)
+                    
+                    prev_valor_liquido = valor_bruto_venda
+                    if not simula_usar_bnb:
+                        prev_valor_liquido = valor_bruto_venda - prev_taxa_saida
+                        
+                    prev_lucro_usdt = prev_valor_liquido - ordem_ativa['valor_investido_usdt']
+                    if simula_usar_bnb:
+                        prev_lucro_usdt -= prev_total_taxas
+                        
+                    prev_lucro_pct = (prev_lucro_usdt / ordem_ativa['valor_investido_usdt']) * 100
+                    sinal_prev = "+" if prev_lucro_usdt >= 0 else ""
+                    
+                    # Exibindo o preview na tela!
+                    st.info(f"💵 **Valor Bruto da Venda:** \${valor_bruto_venda:,.2f} / **{sinal_prev}\${prev_lucro_usdt:,.2f} ({sinal_prev}{prev_lucro_pct:,.2f}%)**")
                 
                 submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
                 
@@ -225,7 +242,6 @@ with col_boleta:
                     if usar_bnb and not st.session_state['saldo_configurado']:
                         st.error("🛑 Operação Bloqueada: Aplique saldo na Tesouraria.")
                     elif preco_venda > 0:
-                        # Backup perfeito da ordem antes de ser modificada para caso o usuário clique em Desfazer
                         ordem_original = copy.deepcopy(ordem_ativa)
                         
                         taxa_saida_usdt = valor_bruto_venda * (0.00075 if usar_bnb else 0.0010)
@@ -263,11 +279,9 @@ with col_boleta:
                         ordem_ativa['lucro_pct'] = lucro_pct
                         ordem_ativa['total_taxas_usdt'] = total_taxas_operacao
                         
-                        # Remove a antiga aberta e coloca na lista de fechadas
                         st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
                         st.session_state['historico_fechado'].append(ordem_ativa)
                         
-                        # Salvando na Pilha de Desfazer
                         st.session_state['pilha_desfazer'].append({
                             'acao': 'venda',
                             'ordem_restaurada': ordem_original,
@@ -309,9 +323,6 @@ with col_fechados:
     else:
         st.write("Nenhuma venda realizada ainda.")
 
-# ==========================================
-# BOTÃO DE DESFAZER AÇÃO (NO RODAPÉ)
-# ==========================================
 if st.session_state['pilha_desfazer']:
     st.markdown("<br>", unsafe_allow_html=True)
     c_empty, c_undo = st.columns([8, 2])
