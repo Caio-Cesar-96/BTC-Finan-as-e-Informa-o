@@ -127,21 +127,14 @@ with col_boleta:
         with st.container(border=True):
             preco_btc_atual = obter_preco_btc()
             
-            c_preco, c_btn_att = st.columns([12, 1], vertical_alignment="bottom")
-            with c_preco:
-                st.markdown(f"""
-                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); height: 42px; padding: 0 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="color: #9ca3af; font-size: 0.9em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
-                        <strong style="font-size: 1.1em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
-                    </div>
-                """, unsafe_allow_html=True)
-            with c_btn_att:
-                if st.button("↻", key="att_compra", help="Atualizar Cotação", use_container_width=True):
-                    st.rerun()
-                    
-            st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+            # Painel limpo sem botão
+            st.markdown(f"""
+                <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
+                    <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
+                </div>
+            """, unsafe_allow_html=True)
 
-            # Formulário limpo e mais rápido, sem pedir data/hora para o usuário
             c1, c2 = st.columns(2)
             with c1:
                 valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
@@ -165,7 +158,6 @@ with col_boleta:
                 elif valor_total_usdt > 0 and preco_execucao > 0:
                     id_operacao = str(uuid.uuid4())[:8].upper()
                     
-                    # Automação da Data e Hora (Puxa do sistema silenciosamente)
                     agora = datetime.datetime.now(fuso_brasilia)
                     
                     taxa_entrada_usdt = valor_total_usdt * (0.00075 if usar_bnb else 0.001)
@@ -203,21 +195,14 @@ with col_boleta:
             else:
                 preco_btc_atual_venda = obter_preco_btc()
                 
-                c_preco_venda, c_btn_att_venda = st.columns([12, 1], vertical_alignment="bottom")
-                with c_preco_venda:
-                    st.markdown(f"""
-                        <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); height: 42px; padding: 0 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                            <span style="color: #9ca3af; font-size: 0.9em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
-                            <strong style="font-size: 1.1em; color: #F3BA2F;">&#36;{preco_btc_atual_venda:,.2f}</strong>
-                        </div>
-                    """, unsafe_allow_html=True)
-                with c_btn_att_venda:
-                    if st.button("↻", key="att_venda", help="Atualizar Cotação", use_container_width=True):
-                        st.rerun()
-                        
-                st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+                # Painel limpo sem botão
+                st.markdown(f"""
+                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual do Bitcoin (BTC/USDT)</span>
+                        <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual_venda:,.2f}</strong>
+                    </div>
+                """, unsafe_allow_html=True)
 
-                # Formatação nova e elegante para a caixa de seleção de vendas (sem o ID visual)
                 opcoes_ordens = {l["id"]: f"Valor: ${l['valor_investido_usdt']:,.2f} / Data {l['data_abertura_br']} - {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
@@ -225,7 +210,6 @@ with col_boleta:
                 with c3:
                     preco_venda = st.number_input("Cotação da Venda (USDT)", min_value=0.0, step=100.0, key="preco_venda")
                 with c4:
-                    # Espaço vazio apenas para manter a caixa de cotação num tamanho agradável (metade da tela)
                     pass 
                 
                 ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
@@ -262,7 +246,6 @@ with col_boleta:
                             
                         lucro_pct = (lucro_usdt / ordem_ativa['valor_investido_usdt']) * 100
                         
-                        # Automação da Data e Hora do Fechamento
                         agora_venda = datetime.datetime.now(fuso_brasilia)
                         
                         ordem_ativa['status'] = "Fechado"
@@ -287,7 +270,6 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in st.session_state['ordens_abertas']:
-            # Canhoto verde limpo de emojis redundantes e com data seca
             st.info(f"**Ordem #{t['id']}** | {t['data_abertura_br']} às {t['hora_abertura']}\n\n{t['quantidade_btc']:.8f} BTC | Custo Total: \${t['valor_investido_usdt']:,.2f} | Preço Pago: \${t['preco_compra']:,.2f} | Taxa: \${t['taxa_entrada_usdt']:.4f}")
     else:
         st.write("Nenhuma ordem aberta no momento.")
@@ -298,8 +280,6 @@ with col_fechados:
         for t in reversed(st.session_state['historico_fechado'][-5:]):
             cor_lucro = "#16a34a" if t['lucro_usdt'] >= 0 else "#dc2626"
             sinal = "+" if t['lucro_usdt'] >= 0 else ""
-            
-            # Limpei também o emoji da taxa do recibo de fechamento para manter o padrão minimalista
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 5px solid {cor_lucro}; margin-bottom: 10px;">
                 <strong>Ordem #{t['id']}</strong> concluída<br>
