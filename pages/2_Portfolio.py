@@ -1,4 +1,4 @@
-#em Brimport streamlit as st
+import streamlit as st
 import datetime
 import requests
 import pandas as pd
@@ -151,21 +151,18 @@ with aba_abertas:
     if not ordens_abertas:
         st.info("Sua carteira está vazia. Nenhuma ordem aberta no momento.")
     else:
-        # Transformando a memória em uma tabela (DataFrame) bonita
         df_abertas = pd.DataFrame(ordens_abertas)
         df_abertas = df_abertas[['id', 'data_abertura_br', 'valor_investido_usdt', 'quantidade_btc', 'preco_compra']]
         df_abertas.columns = ['Ordem', 'Data da Compra', 'Investimento (USDT)', 'Volume (BTC)', 'Preço Pago (USDT)']
         
-        # Formatação de exibição da tabela
-        st.dataframe(
-            df_abertas.style.format({
-                'Investimento (USDT)': '${:,.2f}',
-                'Volume (BTC)': '{:.8f}',
-                'Preço Pago (USDT)': '${:,.2f}'
-            }),
-            use_container_width=True,
-            hide_index=True
-        )
+        # Sintaxe limpa e sequencial para evitar o erro do interpretador AST
+        estilo_abertas = df_abertas.style.format({
+            'Investimento (USDT)': '${:,.2f}',
+            'Volume (BTC)': '{:.8f}',
+            'Preço Pago (USDT)': '${:,.2f}'
+        })
+        
+        st.dataframe(estilo_abertas, use_container_width=True, hide_index=True)
 
 with aba_fechadas:
     if not historico_fechado:
@@ -175,23 +172,19 @@ with aba_fechadas:
         df_fechadas = df_fechadas[['id', 'data_fechamento_br', 'valor_investido_usdt', 'valor_recebido_usdt', 'lucro_usdt', 'lucro_pct']]
         df_fechadas.columns = ['Ordem', 'Data da Venda', 'Custo Original', 'Retorno Final', 'Lucro Líquido ($)', 'Rentabilidade (%)']
         
-        # Função para pintar a tabela de verde ou vermelho no Pandas
         def pintar_lucro(val):
             color = '#16a34a' if val > 0 else '#dc2626' if val < 0 else 'gray'
             return f'color: {color}; font-weight: bold'
 
-        st.dataframe(
-            df_fechadas.style
-            .format({
-                'Custo Original': '${:,.2f}',
-                'Retorno Final': '${:,.2f}',
-                'Lucro Líquido ($)': '${:,.2f}',
-                'Rentabilidade (%)': '{:.2f}%'
-            })
-            .map(pintar_lucro, subset=['Lucro Líquido ($)', 'Rentabilidade (%)']),
-            use_container_width=True,
-            hide_index=True
-        )
+        # Formatação protegida em variável antes de injetar na tela
+        estilo_fechadas = df_fechadas.style.format({
+            'Custo Original': '${:,.2f}',
+            'Retorno Final': '${:,.2f}',
+            'Lucro Líquido ($)': '${:,.2f}',
+            'Rentabilidade (%)': '{:.2f}%'
+        }).map(pintar_lucro, subset=['Lucro Líquido ($)', 'Rentabilidade (%)'])
+
+        st.dataframe(estilo_fechadas, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption(f"Custo Operacional Acumulado (Taxas Totais de Plataforma): **${total_taxas_pagas:.4f}**")eve
+st.caption(f"Custo Operacional Acumulado (Taxas Totais de Plataforma): **${total_taxas_pagas:.4f}**")
