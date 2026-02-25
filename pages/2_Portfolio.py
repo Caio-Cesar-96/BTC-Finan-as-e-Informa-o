@@ -11,7 +11,6 @@ st.markdown("""
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
         
-        /* Oculta os links nativos padrão se quisermos usar só nossos botões */
         [data-testid="stPageLink-NavLink"] {
             width: fit-content;
             padding: 5px 15px;
@@ -20,7 +19,6 @@ st.markdown("""
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* ESTILO DOS CARDS DE PERFORMANCE (AGORA COM CORES E SOMBRAS) */
         .metric-card {
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -38,7 +36,6 @@ st.markdown("""
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
         }
         
-        /* BORDAS DE ACENTO PARA DAR VIDA */
         .card-capital { border-top: 3px solid #F3BA2F; }
         .card-pnl { border-top: 3px solid #3b82f6; }
         .card-realizado { border-top: 3px solid #10b981; }
@@ -76,7 +73,6 @@ def obter_preco_btc():
     except:
         return 65000.0
 
-# --- CABEÇALHO E NAVEGAÇÃO FLUIDA ---
 col_titulo, col_botao = st.columns([8, 2], vertical_alignment="center")
 
 with col_titulo:
@@ -96,7 +92,6 @@ historico_fechado = st.session_state['historico_fechado']
 # --- CÁLCULOS DO MOTOR PYTHON ---
 preco_btc_atual = obter_preco_btc()
 
-# 1. Dados das Ordens Abertas (Exposição e Flutuante)
 total_investido_aberto = sum(o['valor_investido_usdt'] for o in ordens_abertas)
 total_btc_aberto = sum(o['quantidade_btc'] for o in ordens_abertas)
 valor_mercado_atual = total_btc_aberto * preco_btc_atual
@@ -109,7 +104,6 @@ if total_investido_aberto > 0:
 cor_flutuante = "text-green" if pnl_flutuante >= 0 else "text-red"
 sinal_flutuante = "+" if pnl_flutuante >= 0 else ""
 
-# 2. Dados do Histórico Fechado (Realizado e Win Rate)
 lucro_realizado_total = sum(o['lucro_usdt'] for o in historico_fechado)
 total_taxas_pagas = sum(o.get('total_taxas_usdt', 0.0) for o in historico_fechado) + sum(o.get('taxa_entrada_usdt', 0.0) for o in ordens_abertas)
 
@@ -122,7 +116,7 @@ sinal_realizado = "+" if lucro_realizado_total >= 0 else ""
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
-# --- DESENHANDO OS CARDS EM HTML ---
+# --- DESENHANDO OS CARDS ---
 st.subheader("Visão Geral do Portfólio")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -168,19 +162,45 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- DETALHAMENTO DE CUSTÓDIA ---
 aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
 
+# Função universal para pintar textos de verde ou vermelho no Pandas
+def pintar_valores(val):
+    try:
+        val_float = float(val.replace('$', '').replace('%', '').replace(',', ''))
+        cor = '#16a34a' if val_float > 0 else '#dc2626' if val_float < 0 else 'gray'
+        return f'color: {cor}; font-weight: bold'
+    except:
+        return ''
+
 with aba_abertas:
     if not ordens_abertas:
         st.info("Sua carteira está vazia. Nenhuma ordem aberta no momento.")
     else:
-        df_abertas = pd.DataFrame(ordens_abertas)
-        df_abertas = df_abertas[['id', 'data_abertura_br', 'valor_investido_usdt', 'quantidade_btc', 'preco_compra']]
-        df_abertas.columns = ['Ordem', 'Data da Compra', 'Investimento (USDT)', 'Volume (BTC)', 'Preço Pago (USDT)']
+        # Montando dados enriquecidos para Abertas
+        dados_abertas = []
+        for o in ordens_abertas:
+            valor_atual_ordem = o['quantidade_btc'] * preco_btc_atual
+            pnl_dolar = valor_atual_ordem - o['valor_investido_usdt']
+            pnl_pct = (pnl_dolar / o['valor_investido_usdt']) * 100
+            
+            dados_abertas.append({
+                'Ordem': f"#{o['id']}",
+                'Data Compra': f"{o['data_abertura_br']} {o['hora_abertura']}",
+                'Volume (BTC)': o['quantidade_btc'],
+                'Preço Pago': o['preco_compra'],
+                'Investido': o['valor_investido_usdt'],
+                'PnL Atual ($)': pnl_dolar,
+                'Rentabilidade (%)': pnl_pct
+            })
+            
+        df_abertas = pd.DataFrame(dados_abertas)
         
         estilo_abertas = df_abertas.style.format({
-            'Investimento (USDT)': '${:,.2f}',
             'Volume (BTC)': '{:.8f}',
-            'Preço Pago (USDT)': '${:,.2f}'
-        })
+            'Preço Pago': '${:,.2f}',
+            'Investido': '${:,.2f}',
+            'PnL Atual ($)': '${:,.2f}',
+            'Rentabilidade (%)': '{:.2f}%'
+        }).map(pintar_valores, subset=['PnL Atual ($)', 'Rentabilidade (%)'])
         
         st.dataframe(estilo_abertas, use_container_width=True, hide_index=True)
 
@@ -188,20 +208,27 @@ with aba_fechadas:
     if not historico_fechado:
         st.info("Nenhuma ordem foi liquidada ainda.")
     else:
-        df_fechadas = pd.DataFrame(historico_fechado)
-        df_fechadas = df_fechadas[['id', 'data_fechamento_br', 'valor_investido_usdt', 'valor_recebido_usdt', 'lucro_usdt', 'lucro_pct']]
-        df_fechadas.columns = ['Ordem', 'Data da Venda', 'Custo Original', 'Retorno Final', 'Lucro Líquido ($)', 'Rentabilidade (%)']
+        # Montando dados enriquecidos para Fechadas
+        dados_fechadas = []
+        for o in historico_fechado:
+            dados_fechadas.append({
+                'Ordem': f"#{o['id']}",
+                'Entrada': f"{o['data_abertura_br']}",
+                'Saída': f"{o['data_fechamento_br']}",
+                'Investido': o['valor_investido_usdt'],
+                'Retorno Final': o['valor_recebido_usdt'],
+                'Lucro Líquido ($)': o['lucro_usdt'],
+                'Rentabilidade (%)': o['lucro_pct']
+            })
+            
+        df_fechadas = pd.DataFrame(dados_fechadas)
         
-        def pintar_lucro(val):
-            color = '#16a34a' if val > 0 else '#dc2626' if val < 0 else 'gray'
-            return f'color: {color}; font-weight: bold'
-
         estilo_fechadas = df_fechadas.style.format({
-            'Custo Original': '${:,.2f}',
+            'Investido': '${:,.2f}',
             'Retorno Final': '${:,.2f}',
             'Lucro Líquido ($)': '${:,.2f}',
             'Rentabilidade (%)': '{:.2f}%'
-        }).map(pintar_lucro, subset=['Lucro Líquido ($)', 'Rentabilidade (%)'])
+        }).map(pintar_valores, subset=['Lucro Líquido ($)', 'Rentabilidade (%)'])
 
         st.dataframe(estilo_fechadas, use_container_width=True, hide_index=True)
 
