@@ -117,6 +117,37 @@ sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
+# --- CÁLCULOS AVANÇADOS (PAYOFF E STREAK) ---
+media_gain = 0.0
+media_loss = 0.0
+streak_count = 0
+streak_tipo = "Nenhum"
+icone_streak = "➖"
+
+if historico_fechado:
+    # 1. Payoff (Médias)
+    gains = [o['lucro_usdt'] for o in historico_fechado if o['lucro_usdt'] > 0]
+    losses = [o['lucro_usdt'] for o in historico_fechado if o['lucro_usdt'] < 0]
+    
+    if gains: media_gain = sum(gains) / len(gains)
+    if losses: media_loss = sum(losses) / len(losses)
+        
+    # 2. Sequência Atual (Streak)
+    historico_cronologico = sorted(historico_fechado, key=lambda x: f"{x['data_fechamento']} {x['hora_fechamento']}")
+    ordens_reversas = list(reversed(historico_cronologico))
+    
+    ultimo_resultado_positivo = ordens_reversas[0]['lucro_usdt'] > 0
+    streak_tipo = "Gain" if ultimo_resultado_positivo else "Loss"
+    icone_streak = "🔥" if ultimo_resultado_positivo else "🧊"
+    
+    for o in ordens_reversas:
+        if (o['lucro_usdt'] > 0 and ultimo_resultado_positivo) or (o['lucro_usdt'] < 0 and not ultimo_resultado_positivo):
+            streak_count += 1
+        elif o['lucro_usdt'] == 0:
+            continue # Ignora empates (zero a zero) na contagem de streak
+        else:
+            break
+
 # --- CÁLCULO DE TEMPO MÉDIO DE OPERAÇÃO ---
 tempos_operacao = []
 for o in historico_fechado:
@@ -260,6 +291,10 @@ with col_tabelas:
             <span style="color: #9ca3af;">Custo Operacional Acumulado:</span> 
             <strong style="color: #e2e8f0; margin-left: 5px;">&#36;{total_taxas_pagas:.4f}</strong>
         </div>
+        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em; margin-left: 10px;">
+            <span style="color: #9ca3af;">⏱️ Tempo Médio:</span> 
+            <strong style="color: #e2e8f0; margin-left: 5px;">{tempo_medio_str}</strong>
+        </div>
     """, unsafe_allow_html=True)
 
 with col_lateral:
@@ -268,7 +303,7 @@ with col_lateral:
     # 1. BARRA DE FORÇA (WIN/LOSS)
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     st.markdown(f"""
-        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">
+        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-family: sans-serif;">
                 <span style="color: #22c55e; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(34,197,94,0.3);">🟢 Vitórias {win_rate:.0f}%</span>
                 <span style="color: #ef4444; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(239,68,68,0.3);">Derrotas {loss_rate:.0f}% 🔴</span>
@@ -280,7 +315,32 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY) - COM AJUSTES FINAIS
+    # 2. MINI-CARDS: PAYOFF E STREAK
+    col_payoff, col_streak = st.columns(2)
+    with col_payoff:
+        st.markdown(f"""
+            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; text-align: center; margin-bottom: 20px;">
+                <div style="color: #9ca3af; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Média Gain / Loss</div>
+                <div style="font-size: 1em; font-weight: bold;">
+                    <span style="color: #22c55e;">+${media_gain:.2f}</span>
+                    <span style="color: rgba(255,255,255,0.2); margin: 0 5px;">|</span>
+                    <span style="color: #ef4444;">-${abs(media_loss):.2f}</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with col_streak:
+        cor_streak = "#22c55e" if streak_tipo == "Gain" else "#ef4444" if streak_tipo == "Loss" else "gray"
+        st.markdown(f"""
+            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; text-align: center; margin-bottom: 20px;">
+                <div style="color: #9ca3af; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Sequência Atual</div>
+                <div style="font-size: 1.1em; font-weight: bold; color: {cor_streak};">
+                    {icone_streak} {streak_count} {streak_tipo}s
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # 3. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY)
     st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
@@ -315,14 +375,13 @@ with col_lateral:
             hovertemplate="<b>Operação #%{x}</b><br>Acumulado: $%{y:.2f}<extra></extra>"
         ))
         
-        # AJUSTES FINAIS DE LAYOUT (Títulos, Altura, Linha Zero)
         fig.update_layout(
-            height=320, # Altura aumentada
+            height=320,
             margin=dict(l=0, r=0, t=30, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(
-                title=dict(text="Nº da Operação", font=dict(size=12, color="#9ca3af")), # Título X
+                title=dict(text="Nº da Operação", font=dict(size=12, color="#9ca3af")),
                 showgrid=False,
                 zeroline=False,
                 tickmode='linear',
@@ -332,11 +391,11 @@ with col_lateral:
                 tickfont=dict(size=11)
             ),
             yaxis=dict(
-                title=dict(text="Lucro Acumulado ($)", font=dict(size=12, color="#9ca3af")), # Título Y
+                title=dict(text="Lucro Acumulado ($)", font=dict(size=12, color="#9ca3af")),
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.05)",
                 zeroline=True,
-                zerolinecolor="rgba(255,255,255,0.2)", # Linha zero mais forte
+                zerolinecolor="rgba(255,255,255,0.2)",
                 zerolinewidth=1.5,
                 color="#9ca3af",
                 tickprefix="$",
@@ -351,13 +410,5 @@ with col_lateral:
         )
         
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-    # 3. TEMPO MÉDIO DE OPERAÇÃO
-    st.markdown(f"""
-        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em; margin-top: 10px;">
-            <span style="color: #9ca3af;">⏱️ Tempo Médio em Operação:</span> 
-            <strong style="color: #e2e8f0; margin-left: 5px;">{tempo_medio_str}</strong>
-        </div>
-    """, unsafe_allow_html=True)
 
 st.divider()
