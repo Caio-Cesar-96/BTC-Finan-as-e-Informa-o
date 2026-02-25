@@ -159,14 +159,13 @@ with col4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- LAYOUT DIVIDIDO: TABELAS + LATERAL ---
-col_tabelas, col_lateral = st.columns([3, 1])
+# --- LAYOUT DIVIDIDO NO MEIO (50/50) ---
+col_tabelas, col_vazia = st.columns(2)
 
 with col_tabelas:
     # --- DETALHAMENTO DE CUSTÓDIA ---
     aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
 
-    # Função para o Pandas aplicar a cor
     def pintar_tabela(val):
         if isinstance(val, (int, float)):
             if val > 0:
@@ -236,17 +235,18 @@ with col_tabelas:
 
             st.dataframe(estilo_fechadas, use_container_width=True, hide_index=True)
 
-with col_lateral:
-    # Espaçamento para alinhar melhor com o topo das tabelas
-    st.markdown("<br>" * 3, unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    # CARD DE TAXAS REDESENHADO (Sutil, sem emoji, fundo azulado claro, vertical)
+    # CARD DE TAXAS REDESENHADO (Rodapé da tabela, horizontal e ultra-discreto)
     st.markdown(f"""
-        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 8px;">
-            <div style="color: #9ca3af; font-size: 0.9em; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Custo Operacional Acumulado</div>
-            <div style="color: #e2e8f0; font-size: 1.5em; font-weight: bold;">&#36;{total_taxas_pagas:.4f}</div>
-            <div style="color: #6b7280; font-size: 0.85em; margin-top: 8px;">Total de taxas de corretora pagas em todas as operações até o momento.</div>
+        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em;">
+            <span style="color: #9ca3af;">Custo Operacional Acumulado:</span> 
+            <strong style="color: #e2e8f0; margin-left: 5px;">&#36;{total_taxas_pagas:.4f}</strong>
         </div>
     """, unsafe_allow_html=True)
+
+with col_vazia:
+    # Espaço reservado propositalmente para futuros painéis ou gráficos.
+    pass
 
 st.divider()
