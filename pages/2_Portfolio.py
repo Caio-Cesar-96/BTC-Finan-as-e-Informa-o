@@ -116,6 +116,23 @@ sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
+# --- CÁLCULO DE TEMPO MÉDIO DE OPERAÇÃO ---
+tempos_operacao = []
+for o in historico_fechado:
+    try:
+        dt_abertura = datetime.datetime.strptime(f"{o['data_abertura']} {o['hora_abertura']}", "%Y-%m-%d %H:%M")
+        dt_fechamento = datetime.datetime.strptime(f"{o['data_fechamento']} {o['hora_fechamento']}", "%Y-%m-%d %H:%M")
+        tempos_operacao.append((dt_fechamento - dt_abertura).total_seconds())
+    except:
+        pass
+
+tempo_medio_str = "0m"
+if tempos_operacao:
+    media_seg = sum(tempos_operacao) / len(tempos_operacao)
+    horas = int(media_seg // 3600)
+    minutos = int((media_seg % 3600) // 60)
+    tempo_medio_str = f"{horas}h {minutos}m" if horas > 0 else f"{minutos}m"
+
 # --- DESENHANDO OS CARDS ---
 st.subheader("Visão Geral do Portfólio")
 
@@ -160,7 +177,7 @@ with col4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # --- LAYOUT DIVIDIDO NO MEIO (50/50) ---
-col_tabelas, col_vazia = st.columns(2)
+col_tabelas, col_lateral = st.columns([1.1, 0.9], gap="large")
 
 with col_tabelas:
     # --- DETALHAMENTO DE CUSTÓDIA ---
@@ -237,7 +254,6 @@ with col_tabelas:
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # CARD DE TAXAS REDESENHADO (Rodapé da tabela, horizontal e ultra-discreto)
     st.markdown(f"""
         <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em;">
             <span style="color: #9ca3af;">Custo Operacional Acumulado:</span> 
@@ -245,8 +261,47 @@ with col_tabelas:
         </div>
     """, unsafe_allow_html=True)
 
-with col_vazia:
-    # Espaço reservado propositalmente para futuros painéis ou gráficos.
-    pass
+with col_lateral:
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 20px;'>📊 Raio-X de Performance</h4>", unsafe_allow_html=True)
+    
+    # 1. BARRA DE FORÇA (WIN/LOSS)
+    loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
+    st.markdown(f"""
+        <div style="margin-bottom: 25px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px;">
+                <span style="color: #16a34a; font-weight: bold;">Vitórias ({win_rate:.0f}%)</span>
+                <span style="color: #dc2626; font-weight: bold;">Derrotas ({loss_rate:.0f}%)</span>
+            </div>
+            <div style="width: 100%; height: 10px; background-color: #dc2626; border-radius: 5px; overflow: hidden; display: flex;">
+                <div style="width: {win_rate}%; background-color: #16a34a; height: 100%;"></div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 2. SPARKLINE (GRÁFICO DE CURVA DE SOBREVIVÊNCIA)
+    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Lucro Acumulado (USDT)</div>", unsafe_allow_html=True)
+    if not historico_fechado:
+        st.info("O gráfico aparecerá após sua primeira venda.")
+    else:
+        # Preparando os dados para o gráfico
+        df_chart = pd.DataFrame(historico_fechado)
+        df_chart['Datahora'] = pd.to_datetime(df_chart['data_fechamento'] + ' ' + df_chart['hora_fechamento'])
+        df_chart = df_chart.sort_values('Datahora')
+        df_chart['Lucro Acumulado'] = df_chart['lucro_usdt'].cumsum()
+        df_chart = df_chart.set_index('Datahora')
+        
+        # Cor dinâmica: Verde se o acumulado atual é positivo, Vermelho se negativo
+        cor_grafico = "#16a34a" if df_chart['Lucro Acumulado'].iloc[-1] >= 0 else "#dc2626"
+        
+        st.area_chart(df_chart[['Lucro Acumulado']], color=cor_grafico, height=180)
+
+    # 3. TEMPO MÉDIO DE OPERAÇÃO
+    st.markdown(f"""
+        <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 6px; margin-top: 20px;">
+            <span style="color: #9ca3af; font-size: 0.9em;">⏱️ Tempo Médio em Operação:</span><br>
+            <strong style="color: white; font-size: 1.2em;">{tempo_medio_str}</strong>
+        </div>
+    """, unsafe_allow_html=True)
 
 st.divider()
