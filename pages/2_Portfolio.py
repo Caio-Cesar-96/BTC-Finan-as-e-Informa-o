@@ -2,7 +2,7 @@ import streamlit as st
 import datetime
 import requests
 import pandas as pd
-import plotly.graph_objects as go  # <-- NOVA IMPORTAÇÃO AQUI
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Portfólio - O Conselho", page_icon="💼", layout="wide", initial_sidebar_state="collapsed")
 
@@ -280,7 +280,7 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY)
+    # 2. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY) - COM AJUSTES FINAIS
     st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
@@ -298,13 +298,11 @@ with col_lateral:
             eixo_x.append(i + 1)
             eixo_y.append(lucro_acumulado)
             
-        # Cores dinâmicas para o tema dark
         cor_grafico = "#22c55e" if eixo_y[-1] >= 0 else "#ef4444"
         cor_fundo = "rgba(34, 197, 94, 0.1)" if eixo_y[-1] >= 0 else "rgba(239, 68, 68, 0.1)"
         
         fig = go.Figure()
         
-        # Desenhando a linha suave com Plotly
         fig.add_trace(go.Scatter(
             x=eixo_x,
             y=eixo_y,
@@ -317,32 +315,41 @@ with col_lateral:
             hovertemplate="<b>Operação #%{x}</b><br>Acumulado: $%{y:.2f}<extra></extra>"
         ))
         
-        # Limpando o visual para ficar igual corretora de elite
+        # AJUSTES FINAIS DE LAYOUT (Títulos, Altura, Linha Zero)
         fig.update_layout(
-            height=280,
-            margin=dict(l=0, r=0, t=10, b=0),
+            height=320, # Altura aumentada
+            margin=dict(l=0, r=0, t=30, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(
+                title=dict(text="Nº da Operação", font=dict(size=12, color="#9ca3af")), # Título X
                 showgrid=False,
                 zeroline=False,
                 tickmode='linear',
                 tick0=1,
                 dtick=1,
-                color="#9ca3af"
+                color="#9ca3af",
+                tickfont=dict(size=11)
             ),
             yaxis=dict(
+                title=dict(text="Lucro Acumulado ($)", font=dict(size=12, color="#9ca3af")), # Título Y
                 showgrid=True,
                 gridcolor="rgba(255,255,255,0.05)",
                 zeroline=True,
-                zerolinecolor="rgba(255,255,255,0.1)",
+                zerolinecolor="rgba(255,255,255,0.2)", # Linha zero mais forte
+                zerolinewidth=1.5,
                 color="#9ca3af",
-                tickprefix="$"
+                tickprefix="$",
+                tickfont=dict(size=11)
             ),
-            hovermode="x unified"
+            hovermode="x unified",
+            hoverlabel=dict(
+                bgcolor="rgba(30, 41, 59, 0.95)",
+                font_size=12,
+                font_family="sans-serif"
+            )
         )
         
-        # Config desliga a barrinha de menu poluída do Plotly
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
     # 3. TEMPO MÉDIO DE OPERAÇÃO
