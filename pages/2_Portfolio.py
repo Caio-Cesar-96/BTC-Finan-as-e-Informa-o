@@ -180,7 +180,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 col_tabelas, col_lateral = st.columns([1.1, 0.9], gap="large")
 
 with col_tabelas:
-    # Título para alinhar com o lado direito perfeitamente
     st.subheader("📋 Relatórios de Custódia")
     aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
 
@@ -263,10 +262,8 @@ with col_tabelas:
     """, unsafe_allow_html=True)
 
 with col_lateral:
-    # Título para alinhar com o lado esquerdo
     st.subheader("📊 Raio-X de Performance")
     
-    # 1. BARRA DE FORÇA (WIN/LOSS) - VERSÃO PREMIUM
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     st.markdown(f"""
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">
@@ -281,29 +278,30 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. SPARKLINE COM PONTO ZERO (GRÁFICO DE CURVA DE SOBREVIVÊNCIA)
-    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Lucro Acumulado (USDT)</div>", unsafe_allow_html=True)
+    # 2. GRÁFICO DE LINHA SIMPLES (CURVA DE CAPITAL POR OPERAÇÃO)
+    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Por Operação)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
     else:
-        # Preparando os dados
-        df_chart = pd.DataFrame(historico_fechado)
-        df_chart['Datahora'] = pd.to_datetime(df_chart['data_fechamento'] + ' ' + df_chart['hora_fechamento'])
-        df_chart = df_chart.sort_values('Datahora')
-        df_chart['Lucro Acumulado'] = df_chart['lucro_usdt'].cumsum()
+        # Reordenar cronologicamente por garantia
+        df_hist = pd.DataFrame(historico_fechado)
+        df_hist['Datahora'] = pd.to_datetime(df_hist['data_fechamento'] + ' ' + df_hist['hora_fechamento'])
+        df_hist = df_hist.sort_values('Datahora').reset_index(drop=True)
         
-        # O TRUQUE DO PONTO ZERO PARA GARANTIR NO MÍNIMO 2 PONTOS E FORMAR ÁREA
-        primeira_data = df_chart['Datahora'].iloc[0]
-        ponto_zero = pd.DataFrame({
-            'Datahora': [primeira_data - pd.Timedelta(seconds=1)],
-            'Lucro Acumulado': [0.0]
-        })
+        # Lógica Sequencial: O eixo X será ["Início", "#1", "#2", "#3"...]
+        eixo_x = ["Início"]
+        eixo_y = [0.0]
         
-        df_chart_final = pd.concat([ponto_zero, df_chart[['Datahora', 'Lucro Acumulado']]])
-        df_chart_final = df_chart_final.set_index('Datahora')
+        lucro_acumulado = 0.0
+        for i, row in df_hist.iterrows():
+            lucro_acumulado += row['lucro_usdt']
+            eixo_x.append(f"#{i+1}")
+            eixo_y.append(lucro_acumulado)
+            
+        df_chart_final = pd.DataFrame({'Operação': eixo_x, 'Lucro Acumulado (USDT)': eixo_y}).set_index('Operação')
         
-        cor_grafico = "#16a34a" if df_chart_final['Lucro Acumulado'].iloc[-1] >= 0 else "#dc2626"
-        st.area_chart(df_chart_final[['Lucro Acumulado']], color=cor_grafico, height=180)
+        cor_grafico = "#16a34a" if eixo_y[-1] >= 0 else "#dc2626"
+        st.line_chart(df_chart_final, color=cor_grafico, height=180)
 
     # 3. TEMPO MÉDIO DE OPERAÇÃO
     st.markdown(f"""
