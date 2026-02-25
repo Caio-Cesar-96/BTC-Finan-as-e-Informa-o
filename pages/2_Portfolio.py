@@ -137,14 +137,14 @@ if historico_fechado:
     ordens_reversas = list(reversed(historico_cronologico))
     
     ultimo_resultado_positivo = ordens_reversas[0]['lucro_usdt'] > 0
-    streak_tipo = "Gain" if ultimo_resultado_positivo else "Loss"
+    streak_tipo = "Lucro" if ultimo_resultado_positivo else "Prejuízo"
     icone_streak = "🔥" if ultimo_resultado_positivo else "🧊"
     
     for o in ordens_reversas:
         if (o['lucro_usdt'] > 0 and ultimo_resultado_positivo) or (o['lucro_usdt'] < 0 and not ultimo_resultado_positivo):
             streak_count += 1
         elif o['lucro_usdt'] == 0:
-            continue # Ignora empates (zero a zero) na contagem de streak
+            continue
         else:
             break
 
@@ -291,10 +291,6 @@ with col_tabelas:
             <span style="color: #9ca3af;">Custo Operacional Acumulado:</span> 
             <strong style="color: #e2e8f0; margin-left: 5px;">&#36;{total_taxas_pagas:.4f}</strong>
         </div>
-        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em; margin-left: 10px;">
-            <span style="color: #9ca3af;">⏱️ Tempo Médio:</span> 
-            <strong style="color: #e2e8f0; margin-left: 5px;">{tempo_medio_str}</strong>
-        </div>
     """, unsafe_allow_html=True)
 
 with col_lateral:
@@ -315,27 +311,38 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. MINI-CARDS: PAYOFF E STREAK
-    col_payoff, col_streak = st.columns(2)
+    # 2. A TRINDADE: PAYOFF, STREAK E TEMPO MÉDIO
+    col_payoff, col_streak, col_tempo = st.columns(3)
+    
     with col_payoff:
         st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; text-align: center; margin-bottom: 20px;">
-                <div style="color: #9ca3af; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Média Gain / Loss</div>
-                <div style="font-size: 1em; font-weight: bold;">
+            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
+                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Média (L/P)</div>
+                <div style="font-size: 1.1em; font-weight: bold;">
                     <span style="color: #22c55e;">+${media_gain:.2f}</span>
-                    <span style="color: rgba(255,255,255,0.2); margin: 0 5px;">|</span>
+                    <span style="color: rgba(255,255,255,0.2); margin: 0 2px;">|</span>
                     <span style="color: #ef4444;">-${abs(media_loss):.2f}</span>
                 </div>
             </div>
         """, unsafe_allow_html=True)
     
     with col_streak:
-        cor_streak = "#22c55e" if streak_tipo == "Gain" else "#ef4444" if streak_tipo == "Loss" else "gray"
+        cor_streak = "#22c55e" if streak_tipo == "Lucro" else "#ef4444" if streak_tipo == "Prejuízo" else "gray"
         st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; text-align: center; margin-bottom: 20px;">
-                <div style="color: #9ca3af; font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Sequência Atual</div>
-                <div style="font-size: 1.1em; font-weight: bold; color: {cor_streak};">
+            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
+                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Sequência</div>
+                <div style="font-size: 1.2em; font-weight: bold; color: {cor_streak};">
                     {icone_streak} {streak_count} {streak_tipo}s
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    with col_tempo:
+        st.markdown(f"""
+            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
+                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Tempo Médio</div>
+                <div style="font-size: 1.2em; font-weight: bold; color: white;">
+                    ⏱️ {tempo_medio_str}
                 </div>
             </div>
         """, unsafe_allow_html=True)
