@@ -264,6 +264,7 @@ with col_tabelas:
 with col_lateral:
     st.subheader("📊 Raio-X de Performance")
     
+    # 1. BARRA DE FORÇA (WIN/LOSS)
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     st.markdown(f"""
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">
@@ -278,36 +279,39 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. GRÁFICO DE LINHA SIMPLES (CURVA DE CAPITAL POR OPERAÇÃO)
-    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Por Operação)</div>", unsafe_allow_html=True)
+    # 2. GRÁFICO DE LINHA (CURVA DE CAPITAL POR OPERAÇÃO - AJUSTADO)
+    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
     else:
-        # Reordenar cronologicamente por garantia
         df_hist = pd.DataFrame(historico_fechado)
         df_hist['Datahora'] = pd.to_datetime(df_hist['data_fechamento'] + ' ' + df_hist['hora_fechamento'])
         df_hist = df_hist.sort_values('Datahora').reset_index(drop=True)
         
-        # Lógica Sequencial: O eixo X será ["Início", "#1", "#2", "#3"...]
-        eixo_x = ["Início"]
-        eixo_y = [0.0]
+        eixo_x = []
+        eixo_y = []
         
         lucro_acumulado = 0.0
         for i, row in df_hist.iterrows():
             lucro_acumulado += row['lucro_usdt']
-            eixo_x.append(f"#{i+1}")
+            eixo_x.append(i + 1) # Usar números garante a identificação do eixo e leitura deitada
             eixo_y.append(lucro_acumulado)
             
-        df_chart_final = pd.DataFrame({'Operação': eixo_x, 'Lucro Acumulado (USDT)': eixo_y}).set_index('Operação')
+        df_chart_final = pd.DataFrame({
+            'Nº da Operação': eixo_x,
+            'Lucro Acumulado (USDT)': eixo_y
+        })
         
         cor_grafico = "#16a34a" if eixo_y[-1] >= 0 else "#dc2626"
-        st.line_chart(df_chart_final, color=cor_grafico, height=180)
+        
+        # Inserido X e Y para nomear os eixos, e height=300 para dar espaço
+        st.line_chart(df_chart_final, x='Nº da Operação', y='Lucro Acumulado (USDT)', color=cor_grafico, height=300)
 
-    # 3. TEMPO MÉDIO DE OPERAÇÃO
+    # 3. TEMPO MÉDIO DE OPERAÇÃO (DISCRETO E COMPACTO)
     st.markdown(f"""
-        <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 6px; margin-top: 20px;">
-            <span style="color: #9ca3af; font-size: 0.9em;">⏱️ Tempo Médio em Operação:</span><br>
-            <strong style="color: white; font-size: 1.2em;">{tempo_medio_str}</strong>
+        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em; margin-top: 10px;">
+            <span style="color: #9ca3af;">⏱️ Tempo Médio em Operação:</span> 
+            <strong style="color: #e2e8f0; margin-left: 5px;">{tempo_medio_str}</strong>
         </div>
     """, unsafe_allow_html=True)
 
