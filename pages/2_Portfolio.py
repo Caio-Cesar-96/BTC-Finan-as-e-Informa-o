@@ -102,7 +102,7 @@ if total_investido_aberto > 0:
     pnl_flutuante_pct = (pnl_flutuante / total_investido_aberto) * 100
 
 cor_flutuante = "text-green" if pnl_flutuante >= 0 else "text-red"
-sinal_flutuante = "+" if pnl_flutuante >= 0 else "-" # <-- SINAL NEGATIVO CORRIGIDO AQUI
+sinal_flutuante = "+" if pnl_flutuante >= 0 else "-"
 
 lucro_realizado_total = sum(o['lucro_usdt'] for o in historico_fechado)
 total_taxas_pagas = sum(o.get('total_taxas_usdt', 0.0) for o in historico_fechado) + sum(o.get('taxa_entrada_usdt', 0.0) for o in ordens_abertas)
@@ -112,7 +112,7 @@ total_ordens_fechadas = len(historico_fechado)
 win_rate = (ordens_vencedoras / total_ordens_fechadas * 100) if total_ordens_fechadas > 0 else 0.0
 
 cor_realizado = "text-green" if lucro_realizado_total >= 0 else "text-red"
-sinal_realizado = "+" if lucro_realizado_total >= 0 else "-" # <-- SINAL NEGATIVO CORRIGIDO AQUI
+sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
@@ -159,89 +159,94 @@ with col4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- DETALHAMENTO DE CUSTÓDIA ---
-aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
+# --- LAYOUT DIVIDIDO: TABELAS + LATERAL ---
+col_tabelas, col_lateral = st.columns([3, 1])
 
-# Função MATADORA para o Pandas aplicar a cor ANTES de formatar o texto
-def pintar_tabela(val):
-    if isinstance(val, (int, float)):
-        if val > 0:
-            return 'color: #16a34a; font-weight: bold;'
-        elif val < 0:
-            return 'color: #dc2626; font-weight: bold;'
-    return 'color: gray;'
+with col_tabelas:
+    # --- DETALHAMENTO DE CUSTÓDIA ---
+    aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
 
-with aba_abertas:
-    if not ordens_abertas:
-        st.info("Sua carteira está vazia. Nenhuma ordem aberta no momento.")
-    else:
-        # Reorganizando a ordem: Dinheiro primeiro, Datas por último
-        dados_abertas = []
-        for o in ordens_abertas:
-            valor_atual_ordem = o['quantidade_btc'] * preco_btc_atual
-            pnl_dolar = valor_atual_ordem - o['valor_investido_usdt']
-            pnl_pct = (pnl_dolar / o['valor_investido_usdt']) * 100
+    # Função para o Pandas aplicar a cor
+    def pintar_tabela(val):
+        if isinstance(val, (int, float)):
+            if val > 0:
+                return 'color: #16a34a; font-weight: bold;'
+            elif val < 0:
+                return 'color: #dc2626; font-weight: bold;'
+        return 'color: gray;'
+
+    with aba_abertas:
+        if not ordens_abertas:
+            st.info("Sua carteira está vazia. Nenhuma ordem aberta no momento.")
+        else:
+            dados_abertas = []
+            for o in ordens_abertas:
+                valor_atual_ordem = o['quantidade_btc'] * preco_btc_atual
+                pnl_dolar = valor_atual_ordem - o['valor_investido_usdt']
+                pnl_pct = (pnl_dolar / o['valor_investido_usdt']) * 100
+                
+                dados_abertas.append({
+                    'Ordem': f"#{o['id']}",
+                    'Investido': o['valor_investido_usdt'],
+                    'Volume (BTC)': o['quantidade_btc'],
+                    'Preço Pago': o['preco_compra'],
+                    'PnL Atual ($)': pnl_dolar,
+                    'Rentabilidade (%)': pnl_pct,
+                    'Data Compra': f"{o['data_abertura_br']} {o['hora_abertura']}"
+                })
+                
+            df_abertas = pd.DataFrame(dados_abertas)
             
-            dados_abertas.append({
-                'Ordem': f"#{o['id']}",
-                'Investido': o['valor_investido_usdt'],
-                'Volume (BTC)': o['quantidade_btc'],
-                'Preço Pago': o['preco_compra'],
-                'PnL Atual ($)': pnl_dolar,
-                'Rentabilidade (%)': pnl_pct,
-                'Data Compra': f"{o['data_abertura_br']} {o['hora_abertura']}"
+            estilo_abertas = df_abertas.style.map(pintar_tabela, subset=['PnL Atual ($)', 'Rentabilidade (%)']).format({
+                'Investido': '${:,.2f}',
+                'Volume (BTC)': '{:.8f}',
+                'Preço Pago': '${:,.2f}',
+                'PnL Atual ($)': '${:,.2f}',
+                'Rentabilidade (%)': '{:+.2f}%'
             })
             
-        df_abertas = pd.DataFrame(dados_abertas)
-        
-        # Mapeando a cor PRIMEIRO, formatando o dinheiro DEPOIS
-        estilo_abertas = df_abertas.style.map(pintar_tabela, subset=['PnL Atual ($)', 'Rentabilidade (%)']).format({
-            'Investido': '${:,.2f}',
-            'Volume (BTC)': '{:.8f}',
-            'Preço Pago': '${:,.2f}',
-            'PnL Atual ($)': '${:,.2f}',
-            'Rentabilidade (%)': '{:+.2f}%'
-        })
-        
-        st.dataframe(estilo_abertas, use_container_width=True, hide_index=True)
+            st.dataframe(estilo_abertas, use_container_width=True, hide_index=True)
 
-with aba_fechadas:
-    if not historico_fechado:
-        st.info("Nenhuma ordem foi liquidada ainda.")
-    else:
-        # Reorganizando: Dinheiro + Taxa primeiro, Datas por último
-        dados_fechadas = []
-        for o in historico_fechado:
-            dados_fechadas.append({
-                'Ordem': f"#{o['id']}",
-                'Investido': o['valor_investido_usdt'],
-                'Retorno Final': o['valor_recebido_usdt'],
-                'Lucro Líquido ($)': o['lucro_usdt'],
-                'Rentabilidade (%)': o['lucro_pct'],
-                'Taxas Totais ($)': o['total_taxas_usdt'],
-                'Entrada': f"{o['data_abertura_br']}",
-                'Saída': f"{o['data_fechamento_br']}"
-            })
+    with aba_fechadas:
+        if not historico_fechado:
+            st.info("Nenhuma ordem foi liquidada ainda.")
+        else:
+            dados_fechadas = []
+            for o in historico_fechado:
+                dados_fechadas.append({
+                    'Ordem': f"#{o['id']}",
+                    'Investido': o['valor_investido_usdt'],
+                    'Retorno Final': o['valor_recebido_usdt'],
+                    'Lucro Líquido ($)': o['lucro_usdt'],
+                    'Rentabilidade (%)': o['lucro_pct'],
+                    'Taxas Totais ($)': o['total_taxas_usdt'],
+                    'Entrada': f"{o['data_abertura_br']}",
+                    'Saída': f"{o['data_fechamento_br']}"
+                })
+                
+            df_fechadas = pd.DataFrame(dados_fechadas)
             
-        df_fechadas = pd.DataFrame(dados_fechadas)
-        
-        # Mapeando a cor PRIMEIRO, formatando o dinheiro DEPOIS
-        estilo_fechadas = df_fechadas.style.map(pintar_tabela, subset=['Lucro Líquido ($)', 'Rentabilidade (%)']).format({
-            'Investido': '${:,.2f}',
-            'Retorno Final': '${:,.2f}',
-            'Lucro Líquido ($)': '${:,.2f}',
-            'Rentabilidade (%)': '{:+.2f}%',
-            'Taxas Totais ($)': '${:,.4f}'
-        })
+            estilo_fechadas = df_fechadas.style.map(pintar_tabela, subset=['Lucro Líquido ($)', 'Rentabilidade (%)']).format({
+                'Investido': '${:,.2f}',
+                'Retorno Final': '${:,.2f}',
+                'Lucro Líquido ($)': '${:,.2f}',
+                'Rentabilidade (%)': '{:+.2f}%',
+                'Taxas Totais ($)': '${:,.4f}'
+            })
 
-        st.dataframe(estilo_fechadas, use_container_width=True, hide_index=True)
+            st.dataframe(estilo_fechadas, use_container_width=True, hide_index=True)
+
+with col_lateral:
+    # Espaçamento para alinhar melhor com o topo das tabelas
+    st.markdown("<br>" * 3, unsafe_allow_html=True)
+    
+    # CARD DE TAXAS REDESENHADO (Sutil, sem emoji, fundo azulado claro, vertical)
+    st.markdown(f"""
+        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 8px;">
+            <div style="color: #9ca3af; font-size: 0.9em; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Custo Operacional Acumulado</div>
+            <div style="color: #e2e8f0; font-size: 1.5em; font-weight: bold;">&#36;{total_taxas_pagas:.4f}</div>
+            <div style="color: #6b7280; font-size: 0.85em; margin-top: 8px;">Total de taxas de corretora pagas em todas as operações até o momento.</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 st.divider()
-
-# CARD ESTILIZADO PARA AS TAXAS TOTAIS
-st.markdown(f"""
-    <div style="background-color: rgba(243, 186, 47, 0.05); border: 1px solid rgba(243, 186, 47, 0.2); padding: 12px 20px; border-radius: 6px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <span style="color: #9ca3af; font-size: 0.95em;">💸 Custo Operacional Acumulado (Taxas de Corretora):</span> 
-        <strong style="color: #F3BA2F; font-size: 1.1em; margin-left: 10px;">&#36;{total_taxas_pagas:.4f}</strong>
-    </div>
-""", unsafe_allow_html=True)
