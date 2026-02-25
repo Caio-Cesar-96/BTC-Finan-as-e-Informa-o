@@ -5,11 +5,13 @@ import pandas as pd
 
 st.set_page_config(page_title="Portfólio - O Conselho", page_icon="💼", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS INSTITUCIONAL E LIMPO ---
+# --- CSS INSTITUCIONAL E CARDS COM "VIDA" ---
 st.markdown("""
     <style>
         [data-testid="collapsedControl"] {display: none;}
         [data-testid="stSidebar"] {display: none;}
+        
+        /* Oculta os links nativos padrão se quisermos usar só nossos botões */
         [data-testid="stPageLink-NavLink"] {
             width: fit-content;
             padding: 5px 15px;
@@ -18,17 +20,30 @@ st.markdown("""
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* ESTILO DOS CARDS DE PERFORMANCE */
+        /* ESTILO DOS CARDS DE PERFORMANCE (AGORA COM CORES E SOMBRAS) */
         .metric-card {
-            background-color: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.05);
             padding: 20px;
             border-radius: 8px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             height: 100%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* BORDAS DE ACENTO PARA DAR VIDA */
+        .card-capital { border-top: 3px solid #F3BA2F; }
+        .card-pnl { border-top: 3px solid #3b82f6; }
+        .card-realizado { border-top: 3px solid #10b981; }
+        .card-winrate { border-top: 3px solid #8b5cf6; }
+
         .metric-title {
             color: #9ca3af;
             font-size: 0.9em;
@@ -61,8 +76,14 @@ def obter_preco_btc():
     except:
         return 65000.0
 
-st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="⬅️")
-st.title("💼 Cockpit de Performance")
+# --- CABEÇALHO E NAVEGAÇÃO FLUIDA ---
+col_titulo, col_botao = st.columns([8, 2], vertical_alignment="center")
+
+with col_titulo:
+    st.title("💼 Cockpit de Performance")
+with col_botao:
+    st.page_link("pages/1_Calculadora.py", label="Ir para Calculadora", icon="🧮")
+
 st.divider()
 
 # --- VERIFICAÇÃO DE MEMÓRIA ---
@@ -108,7 +129,7 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.markdown(f"""
-        <div class="metric-card">
+        <div class="metric-card card-capital">
             <div class="metric-title">Capital Alocado (Risco)</div>
             <div class="metric-value">&#36;{total_investido_aberto:,.2f}</div>
             <div class="metric-sub text-gold">{total_btc_aberto:.8f} BTC em custódia</div>
@@ -117,7 +138,7 @@ with col1:
 
 with col2:
     st.markdown(f"""
-        <div class="metric-card">
+        <div class="metric-card card-pnl">
             <div class="metric-title">PnL Flutuante (Abertas)</div>
             <div class="metric-value {cor_flutuante}">{sinal_flutuante}&#36;{abs(pnl_flutuante):,.2f}</div>
             <div class="metric-sub {cor_flutuante}">{sinal_flutuante}{pnl_flutuante_pct:.2f}% sobre o investido</div>
@@ -126,7 +147,7 @@ with col2:
 
 with col3:
     st.markdown(f"""
-        <div class="metric-card">
+        <div class="metric-card card-realizado">
             <div class="metric-title">Lucro Líquido Realizado</div>
             <div class="metric-value {cor_realizado}">{sinal_realizado}&#36;{abs(lucro_realizado_total):,.2f}</div>
             <div class="metric-sub text-gray">De {total_ordens_fechadas} ordens fechadas</div>
@@ -135,7 +156,7 @@ with col3:
 
 with col4:
     st.markdown(f"""
-        <div class="metric-card">
+        <div class="metric-card card-winrate">
             <div class="metric-title">Win Rate (Taxa de Acerto)</div>
             <div class="metric-value {cor_winrate}">{win_rate:.1f}%</div>
             <div class="metric-sub text-gray">Ordens Positivas: {ordens_vencedoras}</div>
@@ -145,7 +166,7 @@ with col4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # --- DETALHAMENTO DE CUSTÓDIA ---
-aba_abertas, aba_fechadas = st.tabs(["🟢 Inventário de Custódia (Abertas)", "🎯 Histórico de Operações (Fechadas)"])
+aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
 
 with aba_abertas:
     if not ordens_abertas:
@@ -155,7 +176,6 @@ with aba_abertas:
         df_abertas = df_abertas[['id', 'data_abertura_br', 'valor_investido_usdt', 'quantidade_btc', 'preco_compra']]
         df_abertas.columns = ['Ordem', 'Data da Compra', 'Investimento (USDT)', 'Volume (BTC)', 'Preço Pago (USDT)']
         
-        # Sintaxe limpa e sequencial para evitar o erro do interpretador AST
         estilo_abertas = df_abertas.style.format({
             'Investimento (USDT)': '${:,.2f}',
             'Volume (BTC)': '{:.8f}',
@@ -176,7 +196,6 @@ with aba_fechadas:
             color = '#16a34a' if val > 0 else '#dc2626' if val < 0 else 'gray'
             return f'color: {color}; font-weight: bold'
 
-        # Formatação protegida em variável antes de injetar na tela
         estilo_fechadas = df_fechadas.style.format({
             'Custo Original': '${:,.2f}',
             'Retorno Final': '${:,.2f}',
