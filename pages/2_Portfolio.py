@@ -2,6 +2,7 @@ import streamlit as st
 import datetime
 import requests
 import pandas as pd
+import plotly.graph_objects as go  # <-- NOVA IMPORTAÇÃO AQUI
 
 st.set_page_config(page_title="Portfólio - O Conselho", page_icon="💼", layout="wide", initial_sidebar_state="collapsed")
 
@@ -279,8 +280,8 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. GRÁFICO DE LINHA (CURVA DE CAPITAL POR OPERAÇÃO - AJUSTADO)
-    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital</div>", unsafe_allow_html=True)
+    # 2. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY)
+    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
     else:
@@ -294,20 +295,57 @@ with col_lateral:
         lucro_acumulado = 0.0
         for i, row in df_hist.iterrows():
             lucro_acumulado += row['lucro_usdt']
-            eixo_x.append(i + 1) # Usar números garante a identificação do eixo e leitura deitada
+            eixo_x.append(i + 1)
             eixo_y.append(lucro_acumulado)
             
-        df_chart_final = pd.DataFrame({
-            'Nº da Operação': eixo_x,
-            'Lucro Acumulado (USDT)': eixo_y
-        })
+        # Cores dinâmicas para o tema dark
+        cor_grafico = "#22c55e" if eixo_y[-1] >= 0 else "#ef4444"
+        cor_fundo = "rgba(34, 197, 94, 0.1)" if eixo_y[-1] >= 0 else "rgba(239, 68, 68, 0.1)"
         
-        cor_grafico = "#16a34a" if eixo_y[-1] >= 0 else "#dc2626"
+        fig = go.Figure()
         
-        # Inserido X e Y para nomear os eixos, e height=300 para dar espaço
-        st.line_chart(df_chart_final, x='Nº da Operação', y='Lucro Acumulado (USDT)', color=cor_grafico, height=300)
+        # Desenhando a linha suave com Plotly
+        fig.add_trace(go.Scatter(
+            x=eixo_x,
+            y=eixo_y,
+            mode='lines+markers',
+            name='Lucro Acum.',
+            line=dict(color=cor_grafico, width=3, shape='spline'),
+            marker=dict(size=8, color=cor_grafico, line=dict(color='white', width=1)),
+            fill='tozeroy',
+            fillcolor=cor_fundo,
+            hovertemplate="<b>Operação #%{x}</b><br>Acumulado: $%{y:.2f}<extra></extra>"
+        ))
+        
+        # Limpando o visual para ficar igual corretora de elite
+        fig.update_layout(
+            height=280,
+            margin=dict(l=0, r=0, t=10, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(
+                showgrid=False,
+                zeroline=False,
+                tickmode='linear',
+                tick0=1,
+                dtick=1,
+                color="#9ca3af"
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="rgba(255,255,255,0.05)",
+                zeroline=True,
+                zerolinecolor="rgba(255,255,255,0.1)",
+                color="#9ca3af",
+                tickprefix="$"
+            ),
+            hovermode="x unified"
+        )
+        
+        # Config desliga a barrinha de menu poluída do Plotly
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    # 3. TEMPO MÉDIO DE OPERAÇÃO (DISCRETO E COMPACTO)
+    # 3. TEMPO MÉDIO DE OPERAÇÃO
     st.markdown(f"""
         <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em; margin-top: 10px;">
             <span style="color: #9ca3af;">⏱️ Tempo Médio em Operação:</span> 
