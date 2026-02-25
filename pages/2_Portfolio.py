@@ -180,7 +180,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 col_tabelas, col_lateral = st.columns([1.1, 0.9], gap="large")
 
 with col_tabelas:
-    # --- DETALHAMENTO DE CUSTÓDIA ---
+    # Título para alinhar com o lado direito perfeitamente
+    st.subheader("📋 Relatórios de Custódia")
     aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
 
     def pintar_tabela(val):
@@ -262,39 +263,47 @@ with col_tabelas:
     """, unsafe_allow_html=True)
 
 with col_lateral:
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<h4 style='color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 20px;'>📊 Raio-X de Performance</h4>", unsafe_allow_html=True)
+    # Título para alinhar com o lado esquerdo
+    st.subheader("📊 Raio-X de Performance")
     
-    # 1. BARRA DE FORÇA (WIN/LOSS)
+    # 1. BARRA DE FORÇA (WIN/LOSS) - VERSÃO PREMIUM
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     st.markdown(f"""
-        <div style="margin-bottom: 25px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.9em; margin-bottom: 5px;">
-                <span style="color: #16a34a; font-weight: bold;">Vitórias ({win_rate:.0f}%)</span>
-                <span style="color: #dc2626; font-weight: bold;">Derrotas ({loss_rate:.0f}%)</span>
+        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-family: sans-serif;">
+                <span style="color: #22c55e; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(34,197,94,0.3);">🟢 Vitórias {win_rate:.0f}%</span>
+                <span style="color: #ef4444; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(239,68,68,0.3);">Derrotas {loss_rate:.0f}% 🔴</span>
             </div>
-            <div style="width: 100%; height: 10px; background-color: #dc2626; border-radius: 5px; overflow: hidden; display: flex;">
-                <div style="width: {win_rate}%; background-color: #16a34a; height: 100%;"></div>
+            <div style="width: 100%; height: 12px; background-color: rgba(239,68,68,0.2); border-radius: 6px; overflow: hidden; display: flex; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                <div style="width: {win_rate}%; background: linear-gradient(90deg, #16a34a, #22c55e); height: 100%; box-shadow: 0 0 10px rgba(34,197,94,0.4);"></div>
+                <div style="width: {loss_rate}%; background: linear-gradient(90deg, #dc2626, #ef4444); height: 100%; box-shadow: 0 0 10px rgba(239,68,68,0.4);"></div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. SPARKLINE (GRÁFICO DE CURVA DE SOBREVIVÊNCIA)
+    # 2. SPARKLINE COM PONTO ZERO (GRÁFICO DE CURVA DE SOBREVIVÊNCIA)
     st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Lucro Acumulado (USDT)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
     else:
-        # Preparando os dados para o gráfico
+        # Preparando os dados
         df_chart = pd.DataFrame(historico_fechado)
         df_chart['Datahora'] = pd.to_datetime(df_chart['data_fechamento'] + ' ' + df_chart['hora_fechamento'])
         df_chart = df_chart.sort_values('Datahora')
         df_chart['Lucro Acumulado'] = df_chart['lucro_usdt'].cumsum()
-        df_chart = df_chart.set_index('Datahora')
         
-        # Cor dinâmica: Verde se o acumulado atual é positivo, Vermelho se negativo
-        cor_grafico = "#16a34a" if df_chart['Lucro Acumulado'].iloc[-1] >= 0 else "#dc2626"
+        # O TRUQUE DO PONTO ZERO PARA GARANTIR NO MÍNIMO 2 PONTOS E FORMAR ÁREA
+        primeira_data = df_chart['Datahora'].iloc[0]
+        ponto_zero = pd.DataFrame({
+            'Datahora': [primeira_data - pd.Timedelta(seconds=1)],
+            'Lucro Acumulado': [0.0]
+        })
         
-        st.area_chart(df_chart[['Lucro Acumulado']], color=cor_grafico, height=180)
+        df_chart_final = pd.concat([ponto_zero, df_chart[['Datahora', 'Lucro Acumulado']]])
+        df_chart_final = df_chart_final.set_index('Datahora')
+        
+        cor_grafico = "#16a34a" if df_chart_final['Lucro Acumulado'].iloc[-1] >= 0 else "#dc2626"
+        st.area_chart(df_chart_final[['Lucro Acumulado']], color=cor_grafico, height=180)
 
     # 3. TEMPO MÉDIO DE OPERAÇÃO
     st.markdown(f"""
