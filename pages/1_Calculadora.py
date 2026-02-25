@@ -66,7 +66,14 @@ fuso_brasilia = datetime.timezone(datetime.timedelta(hours=-3))
 
 st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="⬅️")
 
-st.title("🧮 Boleta de Operações")
+# --- CABEÇALHO E NAVEGAÇÃO FLUIDA ---
+col_titulo, col_botao = st.columns([8, 2], vertical_alignment="center")
+
+with col_titulo:
+    st.title("🧮 Boleta de Operações")
+with col_botao:
+    st.page_link("pages/2_Portfolio.py", label="Ir para Portfólio", icon="💼")
+
 st.divider()
 
 if 'ordens_abertas' not in st.session_state: st.session_state['ordens_abertas'] = []
@@ -219,7 +226,6 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # BARRA INVERTIDA REMOVIDA AQUI
                 opcoes_ordens = {l["id"]: f"Ordem #{l['id']} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']} às {l['hora_abertura']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem para Venda:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
