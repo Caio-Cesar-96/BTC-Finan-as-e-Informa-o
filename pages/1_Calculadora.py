@@ -8,8 +8,6 @@ st.set_page_config(page_title="Calculadora - O Conselho", page_icon="🧮", layo
 # --- CSS INSTITUCIONAL ---
 st.markdown("""
     <style>
-        [data-testid="collapsedControl"] {display: none;}
-        [data-testid="stSidebar"] {display: none;}
         [data-testid="stPageLink-NavLink"] {
             width: fit-content;
             padding: 5px 15px;
@@ -63,6 +61,16 @@ st.markdown("""
             font-weight: bold;
             color: white;
         }
+        .badge-taxa {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -91,14 +99,14 @@ if 'ordens_abertas' not in st.session_state: st.session_state['ordens_abertas'] 
 if 'historico_fechado' not in st.session_state: st.session_state['historico_fechado'] = []
 if 'pilha_desfazer' not in st.session_state: st.session_state['pilha_desfazer'] = []
 if 'contador_ordens' not in st.session_state: st.session_state['contador_ordens'] = 1 
-if 'val_compra' not in st.session_state: st.session_state['val_compra'] = 100.0
-if 'preco_compra' not in st.session_state: st.session_state['preco_compra'] = obter_preco_btc()
+if 'val_compra' not in st.session_state: st.session_state['val_compra'] = 0.0
+if 'preco_compra' not in st.session_state: st.session_state['preco_compra'] = 0.0
 
 # --- LAYOUT PRINCIPAL (50/50) ---
 col_boleta, col_espaco, col_simulador = st.columns([10, 1, 10])
 
 with col_boleta:
-    aba_compra, aba_venda = st.tabs(["📥 Abrir Ordem", "📤 Fechar Ordem"])
+    aba_compra, aba_venda = st.tabs(["Abrir Ordem", "Fechar Ordem"])
     
     # === ABA DE COMPRA ===
     with aba_compra:
@@ -258,9 +266,9 @@ with col_simulador:
     
     col_alvo, col_stop = st.columns(2)
     with col_alvo:
-        alvo_pct = st.number_input("🎯 Alvo Desejado (%)", min_value=1, value=5, step=1)
+        alvo_pct = st.number_input("Alvo Desejado (%)", min_value=0, value=0, step=1)
     with col_stop:
-        stop_pct = st.number_input("🛑 Limite de Perda (%)", min_value=1, value=2, step=1)
+        stop_pct = st.number_input("Limite de Perda (%)", min_value=0, value=0, step=1)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
