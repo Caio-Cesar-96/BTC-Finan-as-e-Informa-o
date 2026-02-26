@@ -91,11 +91,8 @@ def carregar_dados_nuvem():
     try:
         resposta = supabase.table("operacoes").select("*").execute()
         dados = resposta.data
-        
-        # Ordenar cronologicamente pelo ID (que contém o Timestamp)
         dados_ordenados = sorted(dados, key=lambda x: x['id'])
         
-        # INJETAR A MÁSCARA VISUAL (001, 002...)
         for indice, d in enumerate(dados_ordenados):
             d['display_id'] = f"{(indice + 1):03d}"
             
@@ -134,7 +131,6 @@ col_boleta, col_espaco, col_simulador = st.columns([10, 1, 10])
 with col_boleta:
     aba_compra, aba_venda = st.tabs(["Abrir Ordem", "Fechar Ordem"])
     
-    # === ABA DE COMPRA ===
     with aba_compra:
         with st.container(border=True):
             preco_btc_atual = obter_preco_btc()
@@ -191,10 +187,7 @@ with col_boleta:
                     }
                     
                     try:
-                        # 1. Salva na Nuvem (sem o display_id, pois a tabela não tem essa coluna)
                         supabase.table("operacoes").insert(nova_ordem).execute()
-                        
-                        # 2. Atualiza a memória local com a máscara nova
                         total_existentes = len(st.session_state['ordens_abertas']) + len(st.session_state['historico_fechado'])
                         nova_ordem['display_id'] = f"{(total_existentes + 1):03d}"
                         
@@ -204,7 +197,6 @@ with col_boleta:
                     except Exception as e:
                         st.error(f"Erro ao salvar no banco: {e}")
 
-    # === ABA DE VENDA ===
     with aba_venda:
         with st.container(border=True):
             if not st.session_state['ordens_abertas']:
@@ -219,7 +211,6 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # Aplicando a máscara visual no Dropdown de seleção
                 opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
@@ -286,9 +277,6 @@ with col_boleta:
                     except Exception as e:
                         st.error(f"Erro ao fechar ordem no banco: {e}")
 
-# ==========================================
-# SIMULADOR DE RISCO E RETORNO
-# ==========================================
 with col_simulador:
     st.subheader("Projeção de Risco e Retorno")
     st.markdown("<div style='color: gray; font-size: 0.9em; margin-bottom: 15px;'>Calcule os cenários antes de abrir a ordem na corretora.</div>", unsafe_allow_html=True)
@@ -350,7 +338,6 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas na Nuvem")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
-            # Aplicando a máscara no display
             st.info(f"**Ordem #{t.get('display_id', '???')}** | {t['quantidade_btc']:.8f} BTC\n\nCusto: \${t['valor_investido_usdt']:,.2f} | Preço: \${t['preco_compra']:,.2f}")
     else:
         st.write("Sua carteira está vazia.")
@@ -369,3 +356,31 @@ with col_fechados:
             """, unsafe_allow_html=True)
     else:
         st.write("Nenhuma venda realizada ainda.")
+
+# === ZONA DE PERIGO (DELETAR ORDENS DO BANCO) ===
+st.markdown("<br>", unsafe_allow_html=True)
+with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
+    todas_ordens = st.session_state['ordens_abertas'] + st.session_state['historico_fechado']
+    if not todas_ordens:
+        st.write("Nenhuma ordem encontrada no banco de dados.")
+    else:
+        opcoes_del = {o['id']: f"Ordem #{o.get('display_id', '???')} ({o['status']}) | {o['data_abertura_br']} | ${o['valor_investido_usdt']:.2f}" for o in todas_ordens}
+        ordem_del_id = st.selectbox("Selecione a ordem para excluir permanentemente:", options=list(opcoes_del.keys()), format_func=lambda x: opcoes_del[x])
+        
+        if st.button("🚨 Apagar Ordem Selecionada", type="primary"):
+            try:
+                # Remove do Supabase
+                supabase.table("operacoes").delete().eq("id", ordem_del_id).execute()
+                # Remove do Cérebro Local
+                st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_del_id]
+                st.session_state['historico_fechado'] = [o for o in st.session_state['historico_fechado'] if o['id'] != ordem_del_id]
+                
+                # Recalcula as máscaras para manter a sequência certa (001, 002...)
+                todas_restantes = sorted(st.session_state['ordens_abertas'] + st.session_state['historico_fechado'], key=lambda x: x['id'])
+                for indice, d in enumerate(todas_restantes):
+                    d['display_id'] = f"{(indice + 1):03d}"
+                    
+                st.success("Ordem apagada com sucesso e numeração reorganizada!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao apagar ordem no banco: {e}")
