@@ -211,7 +211,7 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                # NOVO FORMATO DO DROPDOWN
+                # CORREÇÃO APLICADA AQUI: Formato "Ordem xxx | Valor: $xxx | Preço: $xxx"
                 opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | Valor: ${l['valor_investido_usdt']:,.2f} | Preço: ${l['preco_compra']:,.2f}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
@@ -365,7 +365,8 @@ with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
     if not todas_ordens:
         st.write("Nenhuma ordem encontrada no banco de dados.")
     else:
-        opcoes_del = {o['id']: f"Ordem #{o.get('display_id', '???')} ({o['status']}) | {o['data_abertura_br']} | ${o['valor_investido_usdt']:,.2f}" for o in todas_ordens}
+        # CORREÇÃO APLICADA AQUI TAMBÉM: Padronizando a Zona de Perigo para o mesmo formato
+        opcoes_del = {o['id']: f"Ordem #{o.get('display_id', '???')} ({o['status']}) | Valor: ${o['valor_investido_usdt']:,.2f} | Preço: ${o['preco_compra']:,.2f}" for o in todas_ordens}
         ordem_del_id = st.selectbox("Selecione a ordem para excluir permanentemente:", options=list(opcoes_del.keys()), format_func=lambda x: opcoes_del[x])
         
         if st.button("🚨 Apagar Ordem Selecionada", type="primary"):
