@@ -63,16 +63,6 @@ st.markdown("""
             font-weight: bold;
             color: white;
         }
-        .badge-taxa {
-            background-color: rgba(34, 197, 94, 0.1);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.75em;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -138,11 +128,14 @@ with col_boleta:
                 </div>
             """, unsafe_allow_html=True)
             
-            # Pílula de Taxa + Toggle Limpo
-            st.markdown("<span class='badge-taxa'>TAXA: 0.075%</span>", unsafe_allow_html=True)
-            usar_bnb = st.toggle("Pagar em BNB", value=True)
+            # Toggle de BNB e Pílula Dinâmica
+            usar_bnb = st.toggle("Pagar em BNB", value=True, key="toggle_compra_bnb")
+            
+            if usar_bnb:
+                st.markdown("<div style='margin-bottom: 15px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='margin-bottom: 15px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
 
-            st.markdown("<br>", unsafe_allow_html=True)
             submit_compra = st.button("Executar Compra", type="primary", use_container_width=True)
 
             if submit_compra:
@@ -192,9 +185,13 @@ with col_boleta:
                 
                 preco_venda = st.number_input("Cotação da Venda (USDT)", min_value=0.0, step=100.0, key="preco_venda_input")
                 
-                # Pílula de Taxa + Toggle Limpo
-                st.markdown("<span class='badge-taxa'>TAXA: 0.075%</span>", unsafe_allow_html=True)
-                usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda")
+                # Toggle de BNB e Pílula Dinâmica
+                usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda_bnb")
+                
+                if usar_bnb_venda:
+                    st.markdown("<div style='margin-bottom: 5px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='margin-bottom: 5px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
                 
                 ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
                 valor_bruto_venda = ordem_ativa['quantidade_btc'] * preco_venda
@@ -259,7 +256,6 @@ with col_simulador:
     val_sim = st.session_state.get('val_compra', 0.0)
     preco_sim = st.session_state.get('preco_compra', 0.0)
     
-    # Inputs com números inteiros (step=1)
     col_alvo, col_stop = st.columns(2)
     with col_alvo:
         alvo_pct = st.number_input("🎯 Alvo Desejado (%)", min_value=1, value=5, step=1)
@@ -277,7 +273,7 @@ with col_simulador:
     
     relacao_rr = (lucro_potencial / risco_potencial) if risco_potencial > 0 else 0.0
 
-    # --- DESENHANDO OS CARDS (3 Cards Limpos) ---
+    # --- DESENHANDO OS CARDS ---
     s1, s2 = st.columns(2)
     with s1:
         st.markdown(f"""
