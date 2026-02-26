@@ -78,7 +78,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÕES DE API E SINCRONIZAÇÃO ---
+# --- FUNÇÕES DE API E SINCRONIZAÇÃO COM MÁSCARA ---
 def obter_preco_btc():
     try:
         url = "https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT"
@@ -91,8 +91,16 @@ def carregar_dados_nuvem():
     try:
         resposta = supabase.table("operacoes").select("*").execute()
         dados = resposta.data
-        abertas = [d for d in dados if d['status'] == 'Aberto']
-        fechadas = [d for d in dados if d['status'] == 'Fechado']
+        
+        # Ordenar cronologicamente pelo ID (que contém o Timestamp)
+        dados_ordenados = sorted(dados, key=lambda x: x['id'])
+        
+        # INJETAR A MÁSCARA VISUAL (001, 002...)
+        for indice, d in enumerate(dados_ordenados):
+            d['display_id'] = f"{(indice + 1):03d}"
+            
+        abertas = [d for d in dados_ordenados if d['status'] == 'Aberto']
+        fechadas = [d for d in dados_ordenados if d['status'] == 'Fechado']
         return abertas, fechadas
     except Exception as e:
         st.error(f"Erro ao baixar dados: {e}")
@@ -109,7 +117,7 @@ with col_botao:
 
 st.divider()
 
-# --- VERIFICAÇÃO DE MEMÓRIA (AGORA PUXANDO DA NUVEM) ---
+# --- VERIFICAÇÃO DE MEMÓRIA ---
 if 'dados_sincronizados' not in st.session_state:
     with st.spinner("Sincronizando com o Banco de Dados..."):
         abertas, fechadas = carregar_dados_nuvem()
@@ -154,7 +162,6 @@ with col_boleta:
                 </div>
             """, unsafe_allow_html=True)
             
-            # Toggle de BNB
             usar_bnb = st.toggle("Pagar em BNB", value=True, key="toggle_compra_bnb")
             if usar_bnb:
                 st.markdown("<div style='margin-bottom: 15px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
@@ -165,7 +172,6 @@ with col_boleta:
 
             if submit_compra:
                 if valor_total_usdt > 0 and preco_execucao > 0:
-                    # ID Único baseado no tempo para o Banco de Dados
                     id_operacao = f"ORD-{int(datetime.datetime.now().timestamp())}"
                     agora = datetime.datetime.now(fuso_brasilia)
                     
@@ -184,10 +190,14 @@ with col_boleta:
                         "status": "Aberto"
                     }
                     
-                    # 1. Salva na Nuvem (Supabase)
                     try:
+                        # 1. Salva na Nuvem (sem o display_id, pois a tabela não tem essa coluna)
                         supabase.table("operacoes").insert(nova_ordem).execute()
-                        # 2. Atualiza a tela instantaneamente
+                        
+                        # 2. Atualiza a memória local com a máscara nova
+                        total_existentes = len(st.session_state['ordens_abertas']) + len(st.session_state['historico_fechado'])
+                        nova_ordem['display_id'] = f"{(total_existentes + 1):03d}"
+                        
                         st.session_state['ordens_abertas'].append(nova_ordem)
                         st.success("✅ Ordem salva na nuvem com sucesso!")
                         st.rerun()
@@ -209,7 +219,8 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                opcoes_ordens = {l["id"]: f"Ordem {l['id']} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']}" for l in st.session_state['ordens_abertas']}
+                # Aplicando a máscara visual no Dropdown de seleção
+                opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 preco_venda = st.number_input("Cotação da Venda (USDT)", min_value=0.0, step=100.0, key="preco_venda_input")
@@ -265,10 +276,8 @@ with col_boleta:
                     }
                     
                     try:
-                        # 1. Atualiza no Banco de Dados
                         supabase.table("operacoes").update(dados_atualizacao).eq("id", ordem_ativa['id']).execute()
                         
-                        # 2. Atualiza a memória local
                         ordem_ativa.update(dados_atualizacao)
                         st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
                         st.session_state['historico_fechado'].append(ordem_ativa)
@@ -340,8 +349,9 @@ col_abertos, col_fechados = st.columns(2)
 with col_abertos:
     st.subheader("🟢 Ordens Abertas na Nuvem")
     if st.session_state['ordens_abertas']:
-        for t in st.session_state['ordens_abertas']:
-            st.info(f"**{t['id']}** | {t['quantidade_btc']:.8f} BTC\n\nCusto: \${t['valor_investido_usdt']:,.2f} | Preço: \${t['preco_compra']:,.2f}")
+        for t in reversed(st.session_state['ordens_abertas']):
+            # Aplicando a máscara no display
+            st.info(f"**Ordem #{t.get('display_id', '???')}** | {t['quantidade_btc']:.8f} BTC\n\nCusto: \${t['valor_investido_usdt']:,.2f} | Preço: \${t['preco_compra']:,.2f}")
     else:
         st.write("Sua carteira está vazia.")
 
@@ -353,7 +363,7 @@ with col_fechados:
             sinal = "+" if t.get('lucro_usdt', 0) >= 0 else ""
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
-                <strong>{t['id']}</strong> <span style="color: gray; font-size: 0.9em;">fechada em {t.get('data_fechamento_br', '')}</span><br>
+                <strong>Ordem #{t.get('display_id', '???')}</strong> <span style="color: gray; font-size: 0.9em;">fechada em {t.get('data_fechamento_br', '')}</span><br>
                 Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong>
             </div>
             """, unsafe_allow_html=True)
