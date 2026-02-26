@@ -43,7 +43,6 @@ st.markdown("""
             background-color: rgba(255, 255, 255, 0.15) !important;
             border-bottom: 2px solid #F3BA2F !important;
         }
-        /* CSS para os cards do Simulador */
         .sim-card {
             background-color: rgba(255,255,255,0.03);
             border: 1px solid rgba(255,255,255,0.05);
@@ -63,6 +62,16 @@ st.markdown("""
             font-size: 1.4em;
             font-weight: bold;
             color: white;
+        }
+        .badge-taxa {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            letter-spacing: 0.5px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -87,24 +96,21 @@ with col_botao:
 
 st.divider()
 
-# --- VERIFICAÇÃO DE MEMÓRIA (Limpa e sem a Tesouraria Antiga) ---
+# --- VERIFICAÇÃO DE MEMÓRIA ---
 if 'ordens_abertas' not in st.session_state: st.session_state['ordens_abertas'] = []
 if 'historico_fechado' not in st.session_state: st.session_state['historico_fechado'] = []
 if 'pilha_desfazer' not in st.session_state: st.session_state['pilha_desfazer'] = []
 if 'contador_ordens' not in st.session_state: st.session_state['contador_ordens'] = 1 
-# Inicializando as variáveis do formulário para o simulador ler em tempo real
 if 'val_compra' not in st.session_state: st.session_state['val_compra'] = 100.0
 if 'preco_compra' not in st.session_state: st.session_state['preco_compra'] = obter_preco_btc()
 
-# --- LAYOUT PRINCIPAL (Boleta 50% | Simulador 50%) ---
+# --- LAYOUT PRINCIPAL (50/50) ---
 col_boleta, col_espaco, col_simulador = st.columns([10, 1, 10])
 
 with col_boleta:
-    aba_compra, aba_venda = st.tabs(["🛒 Abrir Ordem", "🎯 Fechar Ordem"])
+    aba_compra, aba_venda = st.tabs(["📥 Abrir Ordem", "📤 Fechar Ordem"])
     
-    # ==========================================
-    # ABA 1: COMPRA
-    # ==========================================
+    # === ABA DE COMPRA ===
     with aba_compra:
         with st.container(border=True):
             preco_btc_atual = obter_preco_btc()
@@ -132,9 +138,11 @@ with col_boleta:
                 </div>
             """, unsafe_allow_html=True)
             
-            # Nova Chavinha BNB Simplificada
-            usar_bnb = st.toggle("💸 Usar BNB para pagar taxas (Desconto de 25%)", value=True)
+            # Pílula de Taxa + Toggle Limpo
+            st.markdown("<span class='badge-taxa'>TAXA: 0.075%</span>", unsafe_allow_html=True)
+            usar_bnb = st.toggle("Pagar em BNB", value=True)
 
+            st.markdown("<br>", unsafe_allow_html=True)
             submit_compra = st.button("Executar Compra", type="primary", use_container_width=True)
 
             if submit_compra:
@@ -164,9 +172,7 @@ with col_boleta:
                     })
                     st.rerun()
 
-    # ==========================================
-    # ABA 2: VENDA
-    # ==========================================
+    # === ABA DE VENDA ===
     with aba_venda:
         with st.container(border=True):
             if not st.session_state['ordens_abertas']:
@@ -185,7 +191,10 @@ with col_boleta:
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 preco_venda = st.number_input("Cotação da Venda (USDT)", min_value=0.0, step=100.0, key="preco_venda_input")
-                usar_bnb_venda = st.toggle("💸 Usar BNB para pagar taxas de saída", value=True, key="toggle_venda")
+                
+                # Pílula de Taxa + Toggle Limpo
+                st.markdown("<span class='badge-taxa'>TAXA: 0.075%</span>", unsafe_allow_html=True)
+                usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda")
                 
                 ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
                 valor_bruto_venda = ordem_ativa['quantidade_btc'] * preco_venda
@@ -202,11 +211,12 @@ with col_boleta:
                     cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
                     
                     st.markdown(f"""
-                        <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
+                        <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
                             <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
                         </div>
                     """, unsafe_allow_html=True)
                 
+                st.markdown("<br>", unsafe_allow_html=True)
                 submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
                 
                 if submit_venda and preco_venda > 0:
@@ -240,25 +250,25 @@ with col_boleta:
                     st.rerun()
 
 # ==========================================
-# O NOVO SIMULADOR DE ALVOS / RISCO
+# SIMULADOR DE RISCO E RETORNO
 # ==========================================
 with col_simulador:
-    st.subheader("🔮 Plano de Voo (Simulador)")
-    st.markdown("<div style='color: gray; font-size: 0.9em; margin-bottom: 15px;'>Projete sua operação antes de apertar o botão de compra.</div>", unsafe_allow_html=True)
+    st.subheader("Projeção de Risco e Retorno")
+    st.markdown("<div style='color: gray; font-size: 0.9em; margin-bottom: 15px;'>Calcule os cenários antes de abrir a ordem na corretora.</div>", unsafe_allow_html=True)
     
-    # Capturando dados ao vivo da Boleta da esquerda
     val_sim = st.session_state.get('val_compra', 0.0)
     preco_sim = st.session_state.get('preco_compra', 0.0)
     
+    # Inputs com números inteiros (step=1)
     col_alvo, col_stop = st.columns(2)
     with col_alvo:
-        alvo_pct = st.number_input("🎯 Alvo Desejado (%)", min_value=0.0, value=5.0, step=1.0)
+        alvo_pct = st.number_input("🎯 Alvo Desejado (%)", min_value=1, value=5, step=1)
     with col_stop:
-        stop_pct = st.number_input("🛑 Limite de Perda (%)", min_value=0.0, value=2.0, step=0.5)
+        stop_pct = st.number_input("🛑 Limite de Perda (%)", min_value=1, value=2, step=1)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- MATEMÁTICA DO SIMULADOR ---
+    # --- MATEMÁTICA ---
     preco_alvo = preco_sim * (1 + (alvo_pct / 100)) if preco_sim > 0 else 0.0
     preco_stop = preco_sim * (1 - (stop_pct / 100)) if preco_sim > 0 else 0.0
     
@@ -266,9 +276,8 @@ with col_simulador:
     risco_potencial = val_sim * (stop_pct / 100)
     
     relacao_rr = (lucro_potencial / risco_potencial) if risco_potencial > 0 else 0.0
-    winrate_necessario = (1 / (1 + relacao_rr)) * 100 if relacao_rr > 0 else 0.0
 
-    # --- DESENHANDO OS CARDS DO SIMULADOR ---
+    # --- DESENHANDO OS CARDS (3 Cards Limpos) ---
     s1, s2 = st.columns(2)
     with s1:
         st.markdown(f"""
@@ -289,40 +298,24 @@ with col_simulador:
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    s3, s4 = st.columns(2)
-    with s3:
-        cor_rr = "#22c55e" if relacao_rr >= 2.0 else "#eab308" if relacao_rr >= 1.0 else "#ef4444"
-        st.markdown(f"""
-            <div class="sim-card">
-                <div class="sim-title" title="Você arrisca $1 para buscar esse valor">Relação Risco/Retorno</div>
-                <div class="sim-val" style="color: {cor_rr};">1 : {relacao_rr:.1f}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    with s4:
-        st.markdown(f"""
-            <div class="sim-card">
-                <div class="sim-title" title="Taxa de acerto mínima para não perder dinheiro">Acerto Mínimo (Empate)</div>
-                <div class="sim-val">{winrate_necessario:.1f}%</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️ Limpar Testes (Zerar Tudo)", use_container_width=True):
-        st.session_state['ordens_abertas'] = []
-        st.session_state['historico_fechado'] = []
-        st.session_state['pilha_desfazer'] = []
-        st.session_state['contador_ordens'] = 1 
-        st.rerun()
+    cor_rr = "#22c55e" if relacao_rr >= 2.0 else "#eab308" if relacao_rr >= 1.0 else "#ef4444"
+    st.markdown(f"""
+        <div class="sim-card" style="border-left: 4px solid {cor_rr}; text-align: left; padding: 20px;">
+            <div class="sim-title">Relação Risco / Retorno</div>
+            <div class="sim-val" style="color: {cor_rr}; font-size: 1.8em;">1 : {relacao_rr:.1f}</div>
+            <div style="font-size: 0.85em; color: gray; margin-top: 5px;">Para cada dólar em risco, você projeta um retorno de ${relacao_rr:.2f}.</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 st.divider()
 
 # ==========================================
-# PAINEL INFERIOR: RESUMO RÁPIDO E DESFAZER
+# PAINEL INFERIOR
 # ==========================================
 col_abertos, col_fechados = st.columns(2)
 
 with col_abertos:
-    st.subheader("🟢 Ordens Abertas (Resumo)")
+    st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in st.session_state['ordens_abertas']:
             st.info(f"**Ordem #{t['id']}** | {t['quantidade_btc']:.8f} BTC\n\nCusto Original: \${t['valor_investido_usdt']:,.2f} | Preço Pago: \${t['preco_compra']:,.2f}")
@@ -330,7 +323,7 @@ with col_abertos:
         st.write("Sua carteira está vazia.")
 
 with col_fechados:
-    st.subheader("🎯 Últimas Liquidações")
+    st.subheader("🧾 Últimas Liquidações")
     if st.session_state['historico_fechado']:
         for t in reversed(st.session_state['historico_fechado'][-3:]):
             cor_lucro = "#16a34a" if t['lucro_usdt'] >= 0 else "#dc2626"
