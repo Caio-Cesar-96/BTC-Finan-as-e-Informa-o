@@ -1,11 +1,10 @@
 import streamlit as st
 import datetime
 import requests
-import pandas as pd
-import plotly.graph_objects as go
+import copy
 from supabase import create_client, Client
 
-st.set_page_config(page_title="Portfólio - O Conselho", page_icon="💼", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Calculadora - O Conselho", page_icon="🧮", layout="wide", initial_sidebar_state="collapsed")
 
 # --- CONEXÃO COM O BANCO DE DADOS (SUPABASE) ---
 @st.cache_resource
@@ -20,7 +19,7 @@ except Exception as e:
     st.error("⚠️ Erro ao conectar com o Banco de Dados. Verifique os Secrets.")
     st.stop()
 
-# --- CSS INSTITUCIONAL E CARDS COM "VIDA" ---
+# --- CSS INSTITUCIONAL ---
 st.markdown("""
     <style>
         [data-testid="stPageLink-NavLink"] {
@@ -30,49 +29,52 @@ st.markdown("""
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        .metric-card {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 20px;
+        button[kind="primary"] {
+            background-color: #F3BA2F !important;
+            color: #000000 !important;
+            border: none !important;
+            font-weight: bold !important;
+            transition: all 0.3s ease !important;
+        }
+        button[kind="primary"]:hover {
+            background-color: #DDA221 !important;
+            transform: scale(1.02) !important;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 10px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 5px 5px 0px 0px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: rgba(255, 255, 255, 0.15) !important;
+            border-bottom: 2px solid #F3BA2F !important;
+        }
+        .sim-card {
+            background-color: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
             border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            padding: 15px;
+            text-align: center;
             height: 100%;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .metric-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
-        }
-        
-        .card-capital { border-top: 3px solid #F3BA2F; }
-        .card-pnl { border-top: 3px solid #3b82f6; }
-        .card-realizado { border-top: 3px solid #10b981; }
-        .card-winrate { border-top: 3px solid #8b5cf6; }
-
-        .metric-title {
+        .sim-title {
             color: #9ca3af;
-            font-size: 0.9em;
+            font-size: 0.85em;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
         }
-        .metric-value {
-            font-size: 1.8em;
+        .sim-val {
+            font-size: 1.4em;
             font-weight: bold;
             color: white;
         }
-        .metric-sub {
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
-        .text-green { color: #16a34a; }
-        .text-red { color: #dc2626; }
-        .text-gray { color: #6b7280; }
-        .text-gold { color: #F3BA2F; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -101,363 +103,282 @@ def carregar_dados_nuvem():
         st.error(f"Erro ao baixar dados: {e}")
         return [], []
 
-col_titulo, col_botao = st.columns([8, 2], vertical_alignment="center")
+fuso_brasilia = datetime.timezone(datetime.timedelta(hours=-3))
 
+# --- CABEÇALHO ---
+col_titulo, col_botao = st.columns([8, 2], vertical_alignment="center")
 with col_titulo:
-    st.title("💼 Cockpit de Performance")
+    st.title("🧮 Boleta de Operações")
 with col_botao:
-    st.page_link("pages/1_Calculadora.py", label="Ir para Calculadora", icon="🧮")
+    st.page_link("pages/2_Portfolio.py", label="Ir para Portfólio", icon="💼")
 
 st.divider()
 
-# --- VERIFICAÇÃO DE MEMÓRIA BLINDADA ---
+# --- VERIFICAÇÃO DE MEMÓRIA ---
 if 'dados_sincronizados' not in st.session_state:
-    with st.spinner("Sincronizando Portfólio com o Banco de Dados..."):
+    with st.spinner("Sincronizando com o Banco de Dados..."):
         abertas, fechadas = carregar_dados_nuvem()
         st.session_state['ordens_abertas'] = abertas
         st.session_state['historico_fechado'] = fechadas
         st.session_state['dados_sincronizados'] = True
 
-# Recarregando via botão oculto para forçar atualização se a página ficar aberta por horas
-col_refresh, col_vazia = st.columns([1, 9])
-with col_refresh:
-    if st.button("🔄 Atualizar Dados"):
-        abertas, fechadas = carregar_dados_nuvem()
-        st.session_state['ordens_abertas'] = abertas
-        st.session_state['historico_fechado'] = fechadas
-        st.rerun()
+if 'val_compra' not in st.session_state: st.session_state['val_compra'] = 0.0
+if 'preco_compra' not in st.session_state: st.session_state['preco_compra'] = 0.0
 
-ordens_abertas = st.session_state.get('ordens_abertas', [])
-historico_fechado = st.session_state.get('historico_fechado', [])
+# --- LAYOUT PRINCIPAL (50/50) ---
+col_boleta, col_espaco, col_simulador = st.columns([10, 1, 10])
 
-# --- CÁLCULOS DO MOTOR PYTHON ---
-preco_btc_atual = obter_preco_btc()
-
-total_investido_aberto = sum(float(o['valor_investido_usdt']) for o in ordens_abertas)
-total_btc_aberto = sum(float(o['quantidade_btc']) for o in ordens_abertas)
-valor_mercado_atual = total_btc_aberto * preco_btc_atual
-pnl_flutuante = valor_mercado_atual - total_investido_aberto
-
-pnl_flutuante_pct = 0.0
-if total_investido_aberto > 0:
-    pnl_flutuante_pct = (pnl_flutuante / total_investido_aberto) * 100
-
-cor_flutuante = "text-green" if pnl_flutuante >= 0 else "text-red"
-sinal_flutuante = "+" if pnl_flutuante >= 0 else "-"
-
-lucro_realizado_total = sum(float(o.get('lucro_usdt', 0)) for o in historico_fechado)
-total_taxas_pagas = sum(float(o.get('total_taxas_usdt', 0)) for o in historico_fechado) + sum(float(o.get('taxa_entrada_usdt', 0)) for o in ordens_abertas)
-
-ordens_vencedoras = sum(1 for o in historico_fechado if float(o.get('lucro_usdt', 0)) > 0)
-total_ordens_fechadas = len(historico_fechado)
-win_rate = (ordens_vencedoras / total_ordens_fechadas * 100) if total_ordens_fechadas > 0 else 0.0
-
-cor_realizado = "text-green" if lucro_realizado_total >= 0 else "text-red"
-sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
-
-cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
-
-# --- CÁLCULOS AVANÇADOS (PAYOFF E STREAK) ---
-media_gain = 0.0
-media_loss = 0.0
-streak_count = 0
-streak_tipo = "Nenhum"
-icone_streak = "➖"
-
-if historico_fechado:
-    gains = [float(o['lucro_usdt']) for o in historico_fechado if float(o.get('lucro_usdt', 0)) > 0]
-    losses = [float(o['lucro_usdt']) for o in historico_fechado if float(o.get('lucro_usdt', 0)) < 0]
+with col_boleta:
+    aba_compra, aba_venda = st.tabs(["Abrir Ordem", "Fechar Ordem"])
     
-    if gains: media_gain = sum(gains) / len(gains)
-    if losses: media_loss = sum(losses) / len(losses)
-        
-    historico_cronologico = sorted(historico_fechado, key=lambda x: f"{x['data_fechamento']} {x['hora_fechamento']}")
-    ordens_reversas = list(reversed(historico_cronologico))
+    with aba_compra:
+        with st.container(border=True):
+            preco_btc_atual = obter_preco_btc()
+            
+            st.markdown(f"""
+                <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual (BTC/USDT)</span>
+                    <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
+                </div>
+            """, unsafe_allow_html=True)
+
+            c1, c2 = st.columns(2)
+            with c1:
+                valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
+            with c2:
+                preco_execucao = st.number_input("Cotação de 1 BTC (Preço Pago)", min_value=0.0, step=100.0, key="preco_compra")
+                
+            quantidade = 0.0
+            if preco_execucao > 0:
+                quantidade = valor_total_usdt / preco_execucao
+                
+            st.markdown(f"""
+                <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
+                    <strong>Volume de Compra:</strong> {quantidade:.8f} BTC
+                </div>
+            """, unsafe_allow_html=True)
+            
+            usar_bnb = st.toggle("Pagar em BNB", value=True, key="toggle_compra_bnb")
+            if usar_bnb:
+                st.markdown("<div style='margin-bottom: 15px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='margin-bottom: 15px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
+
+            submit_compra = st.button("Executar Compra", type="primary", use_container_width=True)
+
+            if submit_compra:
+                if valor_total_usdt > 0 and preco_execucao > 0:
+                    id_operacao = f"ORD-{int(datetime.datetime.now().timestamp())}"
+                    agora = datetime.datetime.now(fuso_brasilia)
+                    
+                    taxa_entrada_usdt = valor_total_usdt * (0.00075 if usar_bnb else 0.001)
+                    quantidade_final = quantidade if usar_bnb else quantidade - (quantidade * 0.001)
+                    
+                    nova_ordem = {
+                        "id": id_operacao,
+                        "data_abertura": agora.strftime("%Y-%m-%d"),
+                        "hora_abertura": agora.strftime("%H:%M"),
+                        "data_abertura_br": agora.strftime("%d/%m/%Y"), 
+                        "valor_investido_usdt": float(valor_total_usdt),
+                        "quantidade_btc": float(quantidade_final), 
+                        "preco_compra": float(preco_execucao),
+                        "taxa_entrada_usdt": float(taxa_entrada_usdt),
+                        "status": "Aberto"
+                    }
+                    
+                    try:
+                        supabase.table("operacoes").insert(nova_ordem).execute()
+                        total_existentes = len(st.session_state['ordens_abertas']) + len(st.session_state['historico_fechado'])
+                        nova_ordem['display_id'] = f"{(total_existentes + 1):03d}"
+                        
+                        st.session_state['ordens_abertas'].append(nova_ordem)
+                        st.success("✅ Ordem salva na nuvem com sucesso!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao salvar no banco: {e}")
+
+    with aba_venda:
+        with st.container(border=True):
+            if not st.session_state['ordens_abertas']:
+                st.info("Nenhuma ordem aberta no banco de dados.")
+            else:
+                preco_btc_atual_venda = obter_preco_btc()
+                
+                st.markdown(f"""
+                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual (BTC/USDT)</span>
+                        <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual_venda:,.2f}</strong>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                # NOVO FORMATO DO DROPDOWN
+                opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | Valor: ${l['valor_investido_usdt']:,.2f} | Preço: ${l['preco_compra']:,.2f}" for l in st.session_state['ordens_abertas']}
+                ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
+                
+                preco_venda = st.number_input("Cotação da Venda (USDT)", min_value=0.0, step=100.0, key="preco_venda_input")
+                
+                usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda_bnb")
+                if usar_bnb_venda:
+                    st.markdown("<div style='margin-bottom: 5px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='margin-bottom: 5px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
+                
+                ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
+                valor_bruto_venda = float(ordem_ativa['quantidade_btc']) * preco_venda
+                
+                if preco_venda > 0:
+                    prev_taxa_saida = valor_bruto_venda * (0.00075 if usar_bnb_venda else 0.0010)
+                    taxa_entrada = float(ordem_ativa.get('taxa_entrada_usdt', 0.0))
+                    
+                    prev_valor_liquido = valor_bruto_venda - prev_taxa_saida
+                    prev_lucro_usdt = prev_valor_liquido - float(ordem_ativa['valor_investido_usdt'])
+                    prev_lucro_pct = (prev_lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
+                    
+                    sinal_prev = "+" if prev_lucro_usdt >= 0 else "-"
+                    cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
+                    
+                    st.markdown(f"""
+                        <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
+                            <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
+                
+                if submit_venda and preco_venda > 0:
+                    taxa_saida_usdt = valor_bruto_venda * (0.00075 if usar_bnb_venda else 0.0010)
+                    total_taxas_operacao = taxa_entrada + taxa_saida_usdt
+                    
+                    valor_liquido_recebido = valor_bruto_venda - taxa_saida_usdt
+                    lucro_usdt = valor_liquido_recebido - float(ordem_ativa['valor_investido_usdt'])
+                    lucro_pct = (lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
+                    agora_venda = datetime.datetime.now(fuso_brasilia)
+                    
+                    dados_atualizacao = {
+                        'status': "Fechado",
+                        'data_fechamento': agora_venda.strftime("%Y-%m-%d"),
+                        'data_fechamento_br': agora_venda.strftime("%d/%m/%Y"),
+                        'hora_fechamento': agora_venda.strftime("%H:%M"),
+                        'preco_venda': float(preco_venda),
+                        'valor_recebido_usdt': float(valor_liquido_recebido),
+                        'lucro_usdt': float(lucro_usdt),
+                        'lucro_pct': float(lucro_pct),
+                        'total_taxas_usdt': float(total_taxas_operacao)
+                    }
+                    
+                    try:
+                        supabase.table("operacoes").update(dados_atualizacao).eq("id", ordem_ativa['id']).execute()
+                        
+                        ordem_ativa.update(dados_atualizacao)
+                        st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
+                        st.session_state['historico_fechado'].append(ordem_ativa)
+                        st.success("✅ Ordem liquidada e salva na nuvem!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao fechar ordem no banco: {e}")
+
+with col_simulador:
+    st.subheader("Projeção de Risco e Retorno")
+    st.markdown("<div style='color: gray; font-size: 0.9em; margin-bottom: 15px;'>Calcule os cenários antes de abrir a ordem na corretora.</div>", unsafe_allow_html=True)
     
-    ultimo_resultado_positivo = float(ordens_reversas[0].get('lucro_usdt', 0)) > 0
-    streak_tipo = "Lucro" if ultimo_resultado_positivo else "Prejuízo"
-    icone_streak = "🔥" if ultimo_resultado_positivo else "🧊"
+    val_sim = st.session_state.get('val_compra', 0.0)
+    preco_sim = st.session_state.get('preco_compra', 0.0)
     
-    for o in ordens_reversas:
-        l_usdt = float(o.get('lucro_usdt', 0))
-        if (l_usdt > 0 and ultimo_resultado_positivo) or (l_usdt < 0 and not ultimo_resultado_positivo):
-            streak_count += 1
-        elif l_usdt == 0:
-            continue
-        else:
-            break
+    col_alvo, col_stop = st.columns(2)
+    with col_alvo:
+        alvo_pct = st.number_input("Alvo Desejado (%)", min_value=0, value=0, step=1)
+    with col_stop:
+        stop_pct = st.number_input("Limite de Perda (%)", min_value=0, value=0, step=1)
 
-# --- CÁLCULO DE TEMPO MÉDIO DE OPERAÇÃO ---
-tempos_operacao = []
-for o in historico_fechado:
-    try:
-        dt_abertura = datetime.datetime.strptime(f"{o['data_abertura']} {o['hora_abertura']}", "%Y-%m-%d %H:%M")
-        dt_fechamento = datetime.datetime.strptime(f"{o['data_fechamento']} {o['hora_fechamento']}", "%Y-%m-%d %H:%M")
-        tempos_operacao.append((dt_fechamento - dt_abertura).total_seconds())
-    except:
-        pass
+    st.markdown("<br>", unsafe_allow_html=True)
 
-tempo_medio_str = "0m"
-if tempos_operacao:
-    media_seg = sum(tempos_operacao) / len(tempos_operacao)
-    horas = int(media_seg // 3600)
-    minutos = int((media_seg % 3600) // 60)
-    tempo_medio_str = f"{horas}h {minutos}m" if horas > 0 else f"{minutos}m"
+    preco_alvo = preco_sim * (1 + (alvo_pct / 100)) if preco_sim > 0 else 0.0
+    preco_stop = preco_sim * (1 - (stop_pct / 100)) if preco_sim > 0 else 0.0
+    lucro_potencial = val_sim * (alvo_pct / 100)
+    risco_potencial = val_sim * (stop_pct / 100)
+    relacao_rr = (lucro_potencial / risco_potencial) if risco_potencial > 0 else 0.0
 
-# --- DESENHANDO OS CARDS ---
-st.subheader("Visão Geral do Portfólio")
-
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    st.markdown(f"""
-        <div class="metric-card card-capital">
-            <div class="metric-title">Capital Alocado (Risco)</div>
-            <div class="metric-value">&#36;{total_investido_aberto:,.2f}</div>
-            <div class="metric-sub text-gold">{total_btc_aberto:.8f} BTC em custódia</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col2:
-    st.markdown(f"""
-        <div class="metric-card card-pnl">
-            <div class="metric-title">PnL Flutuante (Abertas)</div>
-            <div class="metric-value {cor_flutuante}">{sinal_flutuante}&#36;{abs(pnl_flutuante):,.2f}</div>
-            <div class="metric-sub {cor_flutuante}">{sinal_flutuante}{abs(pnl_flutuante_pct):,.2f}% sobre o investido</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col3:
-    st.markdown(f"""
-        <div class="metric-card card-realizado">
-            <div class="metric-title">Lucro Líquido Realizado</div>
-            <div class="metric-value {cor_realizado}">{sinal_realizado}&#36;{abs(lucro_realizado_total):,.2f}</div>
-            <div class="metric-sub text-gray">De {total_ordens_fechadas} ordens fechadas</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with col4:
-    st.markdown(f"""
-        <div class="metric-card card-winrate">
-            <div class="metric-title">Win Rate (Taxa de Acerto)</div>
-            <div class="metric-value {cor_winrate}">{win_rate:.1f}%</div>
-            <div class="metric-sub text-gray">Ordens Positivas: {ordens_vencedoras}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# --- LAYOUT DIVIDIDO NO MEIO (50/50) ---
-col_tabelas, col_lateral = st.columns([1.1, 0.9], gap="large")
-
-with col_tabelas:
-    st.subheader("📋 Relatórios de Custódia")
-    aba_abertas, aba_fechadas = st.tabs(["🟢 Ordens em aberto", "🎯 Ordens finalizadas"])
-
-    def pintar_tabela(val):
-        if isinstance(val, (int, float)):
-            if val > 0:
-                return 'color: #16a34a; font-weight: bold;'
-            elif val < 0:
-                return 'color: #dc2626; font-weight: bold;'
-        return 'color: gray;'
-
-    with aba_abertas:
-        if not ordens_abertas:
-            st.info("Sua carteira está vazia. Nenhuma ordem aberta no momento.")
-        else:
-            dados_abertas = []
-            for o in ordens_abertas:
-                valor_atual_ordem = float(o['quantidade_btc']) * preco_btc_atual
-                pnl_dolar = valor_atual_ordem - float(o['valor_investido_usdt'])
-                pnl_pct = (pnl_dolar / float(o['valor_investido_usdt'])) * 100
-                
-                dados_abertas.append({
-                    'Ordem': f"#{o.get('display_id', '???')}",
-                    'Investido': float(o['valor_investido_usdt']),
-                    'Volume (BTC)': float(o['quantidade_btc']),
-                    'Preço Pago': float(o['preco_compra']),
-                    'PnL Atual ($)': pnl_dolar,
-                    'Rentabilidade (%)': pnl_pct,
-                    'Data Compra': f"{o.get('data_abertura_br', '')} {o.get('hora_abertura', '')}"
-                })
-                
-            df_abertas = pd.DataFrame(dados_abertas)
-            
-            estilo_abertas = df_abertas.style.map(pintar_tabela, subset=['PnL Atual ($)', 'Rentabilidade (%)']).format({
-                'Investido': '${:,.2f}',
-                'Volume (BTC)': '{:.8f}',
-                'Preço Pago': '${:,.2f}',
-                'PnL Atual ($)': '${:,.2f}',
-                'Rentabilidade (%)': '{:+.2f}%'
-            })
-            
-            st.dataframe(estilo_abertas, use_container_width=True, hide_index=True)
-
-    with aba_fechadas:
-        if not historico_fechado:
-            st.info("Nenhuma ordem foi liquidada ainda.")
-        else:
-            dados_fechadas = []
-            for o in historico_fechado:
-                dados_fechadas.append({
-                    'Ordem': f"#{o.get('display_id', '???')}",
-                    'Investido': float(o.get('valor_investido_usdt', 0)),
-                    'Retorno Final': float(o.get('valor_recebido_usdt', 0)),
-                    'Lucro Líquido ($)': float(o.get('lucro_usdt', 0)),
-                    'Rentabilidade (%)': float(o.get('lucro_pct', 0)),
-                    'Taxas Totais ($)': float(o.get('total_taxas_usdt', 0)),
-                    'Entrada': f"{o.get('data_abertura_br', '')}",
-                    'Saída': f"{o.get('data_fechamento_br', '')}"
-                })
-                
-            df_fechadas = pd.DataFrame(dados_fechadas)
-            
-            estilo_fechadas = df_fechadas.style.map(pintar_tabela, subset=['Lucro Líquido ($)', 'Rentabilidade (%)']).format({
-                'Investido': '${:,.2f}',
-                'Retorno Final': '${:,.2f}',
-                'Lucro Líquido ($)': '${:,.2f}',
-                'Rentabilidade (%)': '{:+.2f}%',
-                'Taxas Totais ($)': '${:,.4f}'
-            })
-
-            st.dataframe(estilo_fechadas, use_container_width=True, hide_index=True)
+    s1, s2 = st.columns(2)
+    with s1:
+        st.markdown(f"""
+            <div class="sim-card" style="border-top: 3px solid #16a34a;">
+                <div class="sim-title">Lucro Alvo</div>
+                <div class="sim-val" style="color: #22c55e;">+${lucro_potencial:.2f}</div>
+                <div style="font-size: 0.8em; color: gray; margin-top: 5px;">Vender a ${preco_alvo:,.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with s2:
+        st.markdown(f"""
+            <div class="sim-card" style="border-top: 3px solid #dc2626;">
+                <div class="sim-title">Risco Máximo</div>
+                <div class="sim-val" style="color: #ef4444;">-${risco_potencial:.2f}</div>
+                <div style="font-size: 0.8em; color: gray; margin-top: 5px;">Stop em ${preco_stop:,.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     
+    cor_rr = "#22c55e" if relacao_rr >= 2.0 else "#eab308" if relacao_rr >= 1.0 else "#ef4444"
     st.markdown(f"""
-        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em;">
-            <span style="color: #9ca3af;">Custo Operacional Acumulado:</span> 
-            <strong style="color: #e2e8f0; margin-left: 5px;">&#36;{total_taxas_pagas:.4f}</strong>
+        <div class="sim-card" style="border-left: 4px solid {cor_rr}; text-align: left; padding: 20px;">
+            <div class="sim-title">Relação Risco / Retorno</div>
+            <div class="sim-val" style="color: {cor_rr}; font-size: 1.8em;">1 : {relacao_rr:.1f}</div>
+            <div style="font-size: 0.85em; color: gray; margin-top: 5px;">Para cada dólar em risco, você projeta um retorno de ${relacao_rr:.2f}.</div>
         </div>
     """, unsafe_allow_html=True)
-
-with col_lateral:
-    st.subheader("📊 Raio-X de Performance")
-    
-    # 1. BARRA DE FORÇA (WIN/LOSS)
-    loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
-    st.markdown(f"""
-        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-family: sans-serif;">
-                <span style="color: #22c55e; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(34,197,94,0.3);">🟢 Vitórias {win_rate:.0f}%</span>
-                <span style="color: #ef4444; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(239,68,68,0.3);">Derrotas {loss_rate:.0f}% 🔴</span>
-            </div>
-            <div style="width: 100%; height: 12px; background-color: rgba(239,68,68,0.2); border-radius: 6px; overflow: hidden; display: flex; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-                <div style="width: {win_rate}%; background: linear-gradient(90deg, #16a34a, #22c55e); height: 100%; box-shadow: 0 0 10px rgba(34,197,94,0.4);"></div>
-                <div style="width: {loss_rate}%; background: linear-gradient(90deg, #dc2626, #ef4444); height: 100%; box-shadow: 0 0 10px rgba(239,68,68,0.4);"></div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # 2. A TRINDADE
-    col_payoff, col_streak, col_tempo = st.columns(3)
-    
-    with col_payoff:
-        st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
-                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Média (L/P)</div>
-                <div style="font-size: 1.1em; font-weight: bold;">
-                    <span style="color: #22c55e;">+${media_gain:.2f}</span>
-                    <span style="color: rgba(255,255,255,0.2); margin: 0 2px;">|</span>
-                    <span style="color: #ef4444;">-${abs(media_loss):.2f}</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    with col_streak:
-        cor_streak = "#22c55e" if streak_tipo == "Lucro" else "#ef4444" if streak_tipo == "Prejuízo" else "gray"
-        st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
-                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Sequência</div>
-                <div style="font-size: 1.2em; font-weight: bold; color: {cor_streak};">
-                    {icone_streak} {streak_count} {streak_tipo}s
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    with col_tempo:
-        st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
-                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Tempo Médio</div>
-                <div style="font-size: 1.2em; font-weight: bold; color: white;">
-                    ⏱️ {tempo_medio_str}
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    # 3. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY)
-    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
-    if not historico_fechado:
-        st.info("O gráfico aparecerá após sua primeira venda.")
-    else:
-        df_hist = pd.DataFrame(historico_fechado)
-        df_hist['Datahora'] = pd.to_datetime(df_hist['data_fechamento'] + ' ' + df_hist['hora_fechamento'])
-        df_hist = df_hist.sort_values('Datahora').reset_index(drop=True)
-        
-        eixo_x = []
-        eixo_y = []
-        labels_x = []
-        
-        lucro_acumulado = 0.0
-        for i, row in df_hist.iterrows():
-            lucro_acumulado += float(row.get('lucro_usdt', 0))
-            eixo_x.append(i + 1)
-            eixo_y.append(lucro_acumulado)
-            labels_x.append(f"#{row.get('display_id', '???')}")
-            
-        cor_grafico = "#22c55e" if eixo_y[-1] >= 0 else "#ef4444"
-        cor_fundo = "rgba(34, 197, 94, 0.1)" if eixo_y[-1] >= 0 else "rgba(239, 68, 68, 0.1)"
-        
-        fig = go.Figure()
-        
-        fig.add_trace(go.Scatter(
-            x=eixo_x,
-            y=eixo_y,
-            mode='lines+markers',
-            name='Lucro Acum.',
-            line=dict(color=cor_grafico, width=3, shape='spline'),
-            marker=dict(size=8, color=cor_grafico, line=dict(color='white', width=1)),
-            fill='tozeroy',
-            fillcolor=cor_fundo,
-            customdata=labels_x,
-            hovertemplate="<b>Ordem %{customdata}</b><br>Acumulado: $%{y:.2f}<extra></extra>"
-        ))
-        
-        fig.update_layout(
-            height=320,
-            margin=dict(l=0, r=0, t=30, b=0),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(
-                title=dict(text="Sequência de Fechamento", font=dict(size=12, color="#9ca3af")),
-                showgrid=False,
-                zeroline=False,
-                tickmode='linear',
-                tick0=1,
-                dtick=1,
-                color="#9ca3af",
-                tickfont=dict(size=11)
-            ),
-            yaxis=dict(
-                title=dict(text="Lucro Acumulado ($)", font=dict(size=12, color="#9ca3af")),
-                showgrid=True,
-                gridcolor="rgba(255,255,255,0.05)",
-                zeroline=True,
-                zerolinecolor="rgba(255,255,255,0.2)",
-                zerolinewidth=1.5,
-                color="#9ca3af",
-                tickprefix="$",
-                tickfont=dict(size=11)
-            ),
-            hovermode="x unified",
-            hoverlabel=dict(
-                bgcolor="rgba(30, 41, 59, 0.95)",
-                font_size=12,
-                font_family="sans-serif"
-            )
-        )
-        
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 st.divider()
+
+# ==========================================
+# PAINEL INFERIOR
+# ==========================================
+col_abertos, col_fechados = st.columns(2)
+
+with col_abertos:
+    st.subheader("🟢 Ordens Abertas")
+    if st.session_state['ordens_abertas']:
+        for t in reversed(st.session_state['ordens_abertas']):
+            st.info(f"**Ordem #{t.get('display_id', '???')}** | {t['quantidade_btc']:.8f} BTC\n\nCusto: \${t['valor_investido_usdt']:,.2f} | Preço: \${t['preco_compra']:,.2f}")
+    else:
+        st.write("Sua carteira está vazia.")
+
+with col_fechados:
+    st.subheader("🎯 Ordens finalizadas")
+    if st.session_state['historico_fechado']:
+        for t in reversed(st.session_state['historico_fechado'][-3:]):
+            cor_lucro = "#16a34a" if t.get('lucro_usdt', 0) >= 0 else "#dc2626"
+            sinal = "+" if t.get('lucro_usdt', 0) >= 0 else ""
+            st.markdown(f"""
+            <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
+                <strong>Ordem #{t.get('display_id', '???')}</strong> <span style="color: gray; font-size: 0.9em;">fechada em {t.get('data_fechamento_br', '')}</span><br>
+                Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.write("Nenhuma venda realizada ainda.")
+
+# === ZONA DE PERIGO (DELETAR ORDENS DO BANCO) ===
+st.markdown("<br>", unsafe_allow_html=True)
+with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
+    todas_ordens = st.session_state['ordens_abertas'] + st.session_state['historico_fechado']
+    if not todas_ordens:
+        st.write("Nenhuma ordem encontrada no banco de dados.")
+    else:
+        opcoes_del = {o['id']: f"Ordem #{o.get('display_id', '???')} ({o['status']}) | {o['data_abertura_br']} | ${o['valor_investido_usdt']:,.2f}" for o in todas_ordens}
+        ordem_del_id = st.selectbox("Selecione a ordem para excluir permanentemente:", options=list(opcoes_del.keys()), format_func=lambda x: opcoes_del[x])
+        
+        if st.button("🚨 Apagar Ordem Selecionada", type="primary"):
+            try:
+                supabase.table("operacoes").delete().eq("id", ordem_del_id).execute()
+                st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_del_id]
+                st.session_state['historico_fechado'] = [o for o in st.session_state['historico_fechado'] if o['id'] != ordem_del_id]
+                
+                todas_restantes = sorted(st.session_state['ordens_abertas'] + st.session_state['historico_fechado'], key=lambda x: x['id'])
+                for indice, d in enumerate(todas_restantes):
+                    d['display_id'] = f"{(indice + 1):03d}"
+                    
+                st.success("Ordem apagada com sucesso e numeração reorganizada!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao apagar ordem no banco: {e}")
