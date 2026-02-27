@@ -27,12 +27,17 @@ except Exception as e:
 # --- CSS INSTITUCIONAL E CARDS COM "VIDA" ---
 st.markdown("""
     <style>
+        /* MATAR A BARRA LATERAL PADRÃO */
+        [data-testid="collapsedControl"] {display: none !important;}
+        [data-testid="stSidebar"] {display: none !important;}
+        
         [data-testid="stPageLink-NavLink"] {
-            width: fit-content;
+            width: 100%;
             padding: 5px 15px;
             border-radius: 5px;
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
         }
         
         .metric-card {
@@ -105,11 +110,14 @@ def carregar_dados_nuvem():
         st.error(f"Erro ao baixar dados: {e}")
         return [], []
 
-col_titulo, col_botao = st.columns([8, 2], vertical_alignment="center")
+# --- CABEÇALHO E NAVEGAÇÃO ---
+col_titulo, col_btn_home, col_btn_calc = st.columns([6, 2, 2], vertical_alignment="center")
 
 with col_titulo:
     st.title("💼 Cockpit de Performance")
-with col_botao:
+with col_btn_home:
+    st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="🏠")
+with col_btn_calc:
     st.page_link("pages/1_Calculadora.py", label="Ir para Calculadora", icon="🧮")
 
 st.divider()
