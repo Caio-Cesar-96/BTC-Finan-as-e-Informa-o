@@ -7,6 +7,10 @@ from supabase import create_client, Client
 
 st.set_page_config(page_title="Portfólio - O Conselho", page_icon="💼", layout="wide", initial_sidebar_state="collapsed")
 
+# --- CADEADO DE SEGURANÇA ---
+if not st.session_state.get("autenticado", False):
+    st.switch_page("main.py")
+
 # --- CONEXÃO COM O BANCO DE DADOS (SUPABASE) ---
 @st.cache_resource
 def iniciar_conexao():
