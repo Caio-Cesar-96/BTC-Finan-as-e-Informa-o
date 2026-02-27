@@ -75,14 +75,7 @@ st.markdown("""
             font-weight: bold;
             color: white;
         }
-        .hud-projecao {
-            border-top: 1px dashed rgba(255,255,255,0.1);
-            margin-top: 12px;
-            padding-top: 10px;
-            font-size: 0.85em;
-            display: flex;
-            justify-content: space-between;
-        }
+        /* Classe .hud-projecao removida pois faremos inline para garantir a correção do bug */
     </style>
 """, unsafe_allow_html=True)
 
@@ -164,9 +157,10 @@ with col_boleta:
                 </div>
             """, unsafe_allow_html=True)
             
-            # --- AS DUAS CHAVINHAS LADO A LADO ---
+            # --- AS DUAS CHAVINHAS (CORREÇÃO DE ALINHAMENTO) ---
             col_tog1, col_tog2 = st.columns(2)
             with col_tog1:
+                # Lado Esquerdo (Padrão)
                 usar_bnb = st.toggle("Pagar em BNB", value=True, key="toggle_compra_bnb")
                 if usar_bnb:
                     st.markdown("<div style='margin-bottom: 10px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
@@ -174,18 +168,20 @@ with col_boleta:
                     st.markdown("<div style='margin-bottom: 10px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
             
             with col_tog2:
-                vincular_projecao = st.toggle("Vincular Projeção", value=False, key="toggle_vincular")
-                alvo_input = st.session_state.get('alvo_simulador', 0)
-                stop_input = st.session_state.get('stop_simulador', 0)
-                
-                # AVISO DINÂMICO DO "ESQUECIDINHO"
-                if vincular_projecao:
-                    if alvo_input == 0 and stop_input == 0:
-                        st.markdown("<div style='margin-bottom: 10px;'><span style='color: #eab308; font-size: 0.80em;'>⚠️ Simulador zerado. Ordem ficará livre.</span></div>", unsafe_allow_html=True)
+                # Lado Direito (Empurrado para a extremidade)
+                c_spacer, c_content = st.columns([1.2, 2]) # Coluna vazia empurra o conteúdo
+                with c_content:
+                    vincular_projecao = st.toggle("Vincular Projeção", value=False, key="toggle_vincular")
+                    alvo_input = st.session_state.get('alvo_simulador', 0)
+                    stop_input = st.session_state.get('stop_simulador', 0)
+                    
+                    if vincular_projecao:
+                        if alvo_input == 0 and stop_input == 0:
+                            st.markdown("<div style='margin-bottom: 10px; text-align: right;'><span style='color: #eab308; font-size: 0.80em;'>⚠️ Simulador zerado. Ordem ficará livre.</span></div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<div style='margin-bottom: 10px; text-align: right;'><span style='color: #22c55e; font-size: 0.80em;'>✅ Vinculado: Alvo {alvo_input}% | Stop {stop_input}%</span></div>", unsafe_allow_html=True)
                     else:
-                        st.markdown(f"<div style='margin-bottom: 10px;'><span style='color: #22c55e; font-size: 0.80em;'>✅ Vinculado: Alvo {alvo_input}% | Stop {stop_input}%</span></div>", unsafe_allow_html=True)
-                else:
-                    st.markdown("<div style='margin-bottom: 10px; height: 18px;'></div>", unsafe_allow_html=True) # Espaçador invisível
+                        st.markdown("<div style='margin-bottom: 10px; height: 18px;'></div>", unsafe_allow_html=True)
 
             submit_compra = st.button("Executar Compra", type="primary", use_container_width=True)
 
@@ -197,7 +193,6 @@ with col_boleta:
                     taxa_entrada_usdt = valor_total_usdt * (0.00075 if usar_bnb else 0.001)
                     quantidade_final = quantidade if usar_bnb else quantidade - (quantidade * 0.001)
                     
-                    # LOGICA DA INTENÇÃO EXPLÍCITA
                     teve_projecao = vincular_projecao and (alvo_input > 0 or stop_input > 0)
                     preco_alvo = float(preco_execucao * (1 + (alvo_input / 100))) if alvo_input > 0 else None
                     preco_stop = float(preco_execucao * (1 - (stop_input / 100))) if stop_input > 0 else None
@@ -286,7 +281,6 @@ with col_boleta:
                     lucro_pct = (lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
                     agora_venda = datetime.datetime.now(fuso_brasilia)
                     
-                    # O JUIZ DA DISCIPLINA
                     comportamento = None
                     if ordem_ativa.get('teve_projecao'):
                         alvo = float(ordem_ativa.get('alvo_planejado', 0) or 0)
@@ -380,7 +374,7 @@ with col_simulador:
 st.divider()
 
 # ==========================================
-# PAINEL INFERIOR
+# PAINEL INFERIOR (CORREÇÃO DO BUG HTML)
 # ==========================================
 col_abertos, col_fechados = st.columns(2)
 
@@ -388,29 +382,33 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
-            # O NOVO HUD PROFISSIONAL DE PROJEÇÃO
-            html_projecao = ""
-            if t.get('teve_projecao'):
-                alvo_str = f"🎯 Alvo: ${t['alvo_planejado']:,.2f}" if t.get('alvo_planejado') else "🎯 Alvo: ---"
-                stop_str = f"🛑 Stop: ${t['stop_planejado']:,.2f}" if t.get('stop_planejado') else "🛑 Stop: ---"
-                html_projecao = f"""
-                <div class="hud-projecao">
-                    <span style="color: #22c55e;">{alvo_str}</span>
-                    <span style="color: #ef4444;">{stop_str}</span>
-                </div>
-                """
-                
+            # Renderiza a parte principal do card
             st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #3b82f6;">
+            <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <strong style="color: white; font-size: 1.1em;">Ordem #{t.get('display_id', '???')}</strong>
                     <span style="color: #F3BA2F; font-weight: bold;">{t['quantidade_btc']:.8f} BTC</span>
                 </div>
                 <div style="color: #9ca3af; font-size: 0.9em; margin-bottom: 4px;">Custo: <strong style="color: white;">${t['valor_investido_usdt']:,.2f}</strong></div>
                 <div style="color: #9ca3af; font-size: 0.9em;">Preço Pago: <strong style="color: white;">${t['preco_compra']:,.2f}</strong></div>
-                {html_projecao}
             </div>
             """, unsafe_allow_html=True)
+            
+            # Renderiza o HUD de projeção separadamente (se existir) para evitar o bug
+            if t.get('teve_projecao'):
+                alvo_str = f"🎯 Alvo: ${t['alvo_planejado']:,.2f}" if t.get('alvo_planejado') else "🎯 Alvo: ---"
+                stop_str = f"🛑 Stop: ${t['stop_planejado']:,.2f}" if t.get('stop_planejado') else "🛑 Stop: ---"
+                st.markdown(f"""
+                <div style="background-color: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 0 0 8px 8px; margin-bottom: 10px; border-left: 4px solid #3b82f6; border-top: 1px dashed rgba(255,255,255,0.1);">
+                     <div style="display: flex; justify-content: space-between; font-size: 0.85em;">
+                        <span style="color: #22c55e;">{alvo_str}</span>
+                        <span style="color: #ef4444;">{stop_str}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Apenas um espaçamento se não houver HUD
+                st.markdown('<div style="margin-bottom: 10px;"></div>', unsafe_allow_html=True)
     else:
         st.write("Sua carteira está vazia.")
 
@@ -421,7 +419,6 @@ with col_fechados:
             cor_lucro = "#16a34a" if t.get('lucro_usdt', 0) >= 0 else "#dc2626"
             sinal = "+" if t.get('lucro_usdt', 0) >= 0 else ""
             
-            # Badge de comportamento se existir
             html_comportamento = ""
             comp = t.get('comportamento_final')
             if comp:
@@ -438,7 +435,7 @@ with col_fechados:
     else:
         st.write("Nenhuma venda realizada ainda.")
 
-# === ZONA DE PERIGO (DELETAR ORDENS DO BANCO) ===
+# === ZONA DE PERIGO ===
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
     todas_ordens = st.session_state['ordens_abertas'] + st.session_state['historico_fechado']
