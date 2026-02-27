@@ -51,7 +51,13 @@ def obter_preco_btc():
         except:
             return None
 
-st.title("📊 Terminal de Operações")
+col_titulo, col_sair = st.columns([8, 2], vertical_alignment="center")
+with col_titulo:
+    st.title("📊 Terminal de Operações")
+with col_sair:
+    if st.button("🚪 Sair", use_container_width=True):
+        st.session_state.clear() # Limpa a memória
+        st.switch_page("main.py")
 st.divider()
 
 st.markdown("<p style='text-align: center; margin-bottom: 30px;'>Selecione um dos módulos abaixo para iniciar suas alocações e análises de mercado:</p>", unsafe_allow_html=True)
