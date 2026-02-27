@@ -1,45 +1,99 @@
 import streamlit as st
+from supabase import create_client, Client
 
-# Configuração da página de Login
+# --- CONFIGURAÇÃO INICIAL ---
 st.set_page_config(page_title="Login - O Conselho", page_icon="🔒", layout="centered", initial_sidebar_state="collapsed")
 
-# Esconder o menu lateral na tela de login
-st.markdown("""
-    <style>
-        [data-testid="collapsedControl"] {display: none;}
-        [data-testid="stSidebar"] {display: none;}
-    </style>
-""", unsafe_allow_html=True)
+# Esconder menu lateral se não estiver autenticado
+if not st.session_state.get("autenticado", False):
+    st.markdown("""
+        <style>
+            [data-testid="collapsedControl"] {display: none;}
+            [data-testid="stSidebar"] {display: none;}
+        </style>
+    """, unsafe_allow_html=True)
 
-def check_password():
-    def password_guessed():
-        # Busca a chave nos Secrets. Se o arquivo não estiver configurado, usa a fallback provisória.
-        chave_correta = st.secrets.get("CHAVE_MESTRE", "CCSS-5454")
+# --- CONEXÃO COM SUPABASE ---
+@st.cache_resource
+def iniciar_conexao():
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
+
+try:
+    supabase: Client = iniciar_conexao()
+except Exception as e:
+    st.error("⚠️ Erro ao conectar com o Banco de Dados. Verifique os Secrets.")
+    st.stop()
+
+# --- FLUXO DA TELA ---
+if not st.session_state.get("autenticado", False):
+    _, col_main, _ = st.columns([1, 2, 1])
+    
+    with col_main:
+        st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: gray;'>Terminal de Operações Restrito</p>", unsafe_allow_html=True)
         
-        if st.session_state["password"] == chave_correta:
-            st.session_state["autenticado"] = True
-            del st.session_state["password"]  # Limpa a senha da memória por segurança
-        else:
+        aba_login, aba_cadastro = st.tabs(["🔑 Entrar", "📝 Criar Conta"])
+        
+        # ABA 1: LOGIN
+        with aba_login:
+            email_login = st.text_input("E-mail", key="email_log")
+            senha_login = st.text_input("Senha", type="password", key="senha_log")
+            btn_login = st.button("Acessar Terminal", type="primary", use_container_width=True)
+            
+            if btn_login:
+                if email_login and senha_login:
+                    try:
+                        # Autenticação oficial no Supabase
+                        resposta = supabase.auth.sign_in_with_password({"email": email_login, "password": senha_login})
+                        st.session_state["autenticado"] = True
+                        st.session_state["user_id"] = resposta.user.id # SALVANDO A IDENTIDADE DO USUÁRIO
+                        st.rerun()
+                    except Exception as e:
+                        st.error("❌ E-mail ou senha incorretos.")
+                else:
+                    st.warning("Preencha todos os campos.")
+        
+        # ABA 2: CADASTRO COM CHAVE MESTRA
+        with aba_cadastro:
+            email_cad = st.text_input("Novo E-mail", key="email_cad")
+            senha_cad = st.text_input("Criar Senha", type="password", key="senha_cad")
+            senha_conf = st.text_input("Repita a Senha", type="password", key="senha_conf")
+            chave_mestra = st.text_input("Chave de Convite (Master Key)", type="password", key="chave_cad")
+            btn_cadastrar = st.button("Criar Credencial", type="primary", use_container_width=True)
+            
+            if btn_cadastrar:
+                chave_correta = st.secrets.get("CHAVE_MESTRE", "CCSS-5454")
+                
+                if chave_mestra != chave_correta:
+                    st.error("❌ Chave de convite inválida.")
+                elif senha_cad != senha_conf:
+                    st.error("❌ As senhas não coincidem.")
+                elif len(senha_cad) < 6:
+                    st.error("❌ A senha deve ter pelo menos 6 caracteres.")
+                elif email_cad and senha_cad:
+                    try:
+                        # Criação oficial de usuário no Supabase
+                        resposta = supabase.auth.sign_up({"email": email_cad, "password": senha_cad})
+                        st.success("✅ Conta criada com sucesso! Você já pode fazer o login na aba ao lado.")
+                    except Exception as e:
+                        st.error(f"❌ Erro ao criar conta. Verifique se o e-mail já existe.")
+                else:
+                    st.warning("Preencha todos os campos.")
+
+# SE JÁ ESTIVER LOGADO
+else:
+    _, col_login, _ = st.columns([1, 2, 1])
+    with col_login:
+        st.success("✅ Acesso Liberado.")
+        st.write("Conexão estabelecida e criptografada.")
+        
+        if st.button("Entrar no Terminal", type="primary", use_container_width=True):
+            st.switch_page("pages/0_Terminal.py")
+            
+        if st.button("Sair (Logout)", type="secondary", use_container_width=True):
+            supabase.auth.sign_out()
             st.session_state["autenticado"] = False
-
-    # Se a variável 'autenticado' não existir ou for False, exibe a tela de login
-    if not st.session_state.get("autenticado", False):
-        _, col_login, _ = st.columns([1, 2, 1])
-        with col_login:
-            st.markdown("<h1 style='text-align: center;'>🏛️ O Conselho</h1>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: gray;'>Insira sua chave de acesso à mesa de operações.</p>", unsafe_allow_html=True)
-            
-            # O input aciona a função password_guessed ao apertar Enter
-            st.text_input("Chave de Acesso", type="password", on_change=password_guessed, key="password")
-            
-            # Se a tentativa de senha foi feita e registrada como False, exibe o erro
-            if "autenticado" in st.session_state and not st.session_state["autenticado"]:
-                st.error("❌ Chave inválida. Acesso negado à tesouraria.")
-        return False
-    else:
-        return True
-
-# Execução do fluxo principal
-if check_password():
-    # Redireciona para o Terminal após a autenticação
-    st.switch_page("pages/0_Terminal.py")
+            st.session_state["user_id"] = None
+            st.rerun()
