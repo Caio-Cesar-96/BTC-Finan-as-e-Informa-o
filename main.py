@@ -78,7 +78,7 @@ if not st.session_state.get("autenticado", False):
                         resposta = supabase.auth.sign_up({"email": email_cad, "password": senha_cad})
                         st.success("✅ Conta criada com sucesso! Você já pode fazer o login na aba ao lado.")
                     except Exception as e:
-                        st.error(f"❌ Erro ao criar conta. Verifique se o e-mail já existe.")
+                        st.error(f"❌ Erro detalhado do Supabase: {e}")
                 else:
                     st.warning("Preencha todos os campos.")
 
