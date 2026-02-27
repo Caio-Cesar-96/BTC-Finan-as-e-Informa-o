@@ -75,9 +75,53 @@ st.markdown("""
             font-weight: bold;
             color: white;
         }
-        /* Classe .hud-projecao removida pois faremos inline para garantir a correção do bug */
     </style>
 """, unsafe_allow_html=True)
+
+# ==========================================
+# O JUIZ DA DISCIPLINA (MOTOR MATEMÁTICO)
+# ==========================================
+def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
+    """
+    ---------------------------------------------------------
+    RÉGUA DE JULGAMENTO DE DISCIPLINA (Valores de Calibragem)
+    ---------------------------------------------------------
+    1. Sniper: Acima de 90% do Alvo atingido.
+    2. Mão de Alface: De 10% até 90% do Alvo.
+    3. Saída Estratégica (0 a 0): Entre -10% do Stop e +10% do Alvo.
+    4. Resiliência (Stop Técnico): Perda de -10% até -110% do Stop.
+    5. Descontrole (Tilt): Perda superior a -110% do Stop.
+    ---------------------------------------------------------
+    """
+    if not alvo and not stop:
+        return None
+        
+    lucro_real = preco_venda - preco_compra
+    
+    # Se a ordem foi para o LUCRO (ou zero a zero positivo)
+    if lucro_real >= 0:
+        if alvo and alvo > preco_compra:
+            alvo_esperado = alvo - preco_compra
+            pct_alcancado = lucro_real / alvo_esperado
+            
+            if pct_alcancado >= 0.90: return "🏆 Sniper"
+            elif pct_alcancado > 0.10: return "🥬 Mão de Alface"
+            else: return "🛡️ Saída Estratégica"
+        else:
+            return "⚖️ Ganho Livre"
+            
+    # Se a ordem foi para o PREJUÍZO (ou zero a zero negativo)
+    else:
+        if stop and stop < preco_compra:
+            perda_real = preco_compra - preco_venda
+            stop_maximo = preco_compra - stop
+            pct_perdido = perda_real / stop_maximo
+            
+            if pct_perdido <= 0.10: return "🛡️ Saída Estratégica"
+            elif pct_perdido <= 1.10: return "🛑 Resiliência"
+            else: return "💥 Descontrole"
+        else:
+            return "💥 Perda Livre"
 
 # --- FUNÇÕES DE API E SINCRONIZAÇÃO COM MÁSCARA ---
 def obter_preco_btc():
@@ -157,10 +201,9 @@ with col_boleta:
                 </div>
             """, unsafe_allow_html=True)
             
-            # --- AS DUAS CHAVINHAS (CORREÇÃO DE ALINHAMENTO) ---
+            # --- AS DUAS CHAVINHAS ---
             col_tog1, col_tog2 = st.columns(2)
             with col_tog1:
-                # Lado Esquerdo (Padrão)
                 usar_bnb = st.toggle("Pagar em BNB", value=True, key="toggle_compra_bnb")
                 if usar_bnb:
                     st.markdown("<div style='margin-bottom: 10px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
@@ -168,8 +211,7 @@ with col_boleta:
                     st.markdown("<div style='margin-bottom: 10px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
             
             with col_tog2:
-                # Lado Direito (Empurrado para a extremidade)
-                c_spacer, c_content = st.columns([1.2, 2]) # Coluna vazia empurra o conteúdo
+                c_spacer, c_content = st.columns([1.2, 2])
                 with c_content:
                     vincular_projecao = st.toggle("Vincular Projeção", value=False, key="toggle_vincular")
                     alvo_input = st.session_state.get('alvo_simulador', 0)
@@ -263,9 +305,30 @@ with col_boleta:
                     sinal_prev = "+" if prev_lucro_usdt >= 0 else "-"
                     cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
                     
+                    # PROJEÇÃO DO VEREDITO (GATILHO PSICOLÓGICO)
+                    comportamento_prev = None
+                    if ordem_ativa.get('teve_projecao'):
+                        comportamento_prev = avaliar_comportamento(
+                            float(ordem_ativa['preco_compra']), 
+                            preco_venda, 
+                            float(ordem_ativa.get('alvo_planejado')) if ordem_ativa.get('alvo_planejado') else None,
+                            float(ordem_ativa.get('stop_planejado')) if ordem_ativa.get('stop_planejado') else None
+                        )
+
+                    html_veredito = ""
+                    if comportamento_prev:
+                        cor_ver = "#22c55e" if "Sniper" in comportamento_prev else "#eab308" if "Alface" in comportamento_prev else "#ef4444" if "Descontrole" in comportamento_prev else "gray"
+                        html_veredito = f"""
+                        <div style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase;">Projeção de Disciplina:</span>
+                            <strong style="color: {cor_ver}; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; font-size: 0.9em;">{comportamento_prev}</strong>
+                        </div>
+                        """
+                    
                     st.markdown(f"""
                         <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
                             <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
+                            {html_veredito}
                         </div>
                     """, unsafe_allow_html=True)
                 
@@ -281,21 +344,15 @@ with col_boleta:
                     lucro_pct = (lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
                     agora_venda = datetime.datetime.now(fuso_brasilia)
                     
-                    comportamento = None
+                    # CARIMBO FINAL USANDO A FUNÇÃO MASTER
+                    comportamento_final = None
                     if ordem_ativa.get('teve_projecao'):
-                        alvo = float(ordem_ativa.get('alvo_planejado', 0) or 0)
-                        stop = float(ordem_ativa.get('stop_planejado', 0) or 0)
-                        
-                        if alvo > 0 and preco_venda >= alvo:
-                            comportamento = "🏆 Sniper"
-                        elif stop > 0 and preco_venda <= stop:
-                            comportamento = "🛑 Resiliência"
-                        elif preco_venda > float(ordem_ativa['preco_compra']) and (alvo == 0 or preco_venda < alvo):
-                            comportamento = "🥬 Mão de Alface"
-                        elif preco_venda < float(ordem_ativa['preco_compra']):
-                            comportamento = "💥 Descontrole"
-                        else:
-                            comportamento = "⚖️ Neutro"
+                        comportamento_final = avaliar_comportamento(
+                            float(ordem_ativa['preco_compra']), 
+                            preco_venda, 
+                            float(ordem_ativa.get('alvo_planejado')) if ordem_ativa.get('alvo_planejado') else None,
+                            float(ordem_ativa.get('stop_planejado')) if ordem_ativa.get('stop_planejado') else None
+                        )
 
                     dados_atualizacao = {
                         'status': "Fechado",
@@ -307,7 +364,7 @@ with col_boleta:
                         'lucro_usdt': float(lucro_usdt),
                         'lucro_pct': float(lucro_pct),
                         'total_taxas_usdt': float(total_taxas_operacao),
-                        'comportamento_final': comportamento
+                        'comportamento_final': comportamento_final
                     }
                     
                     try:
@@ -316,7 +373,7 @@ with col_boleta:
                         ordem_ativa.update(dados_atualizacao)
                         st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
                         st.session_state['historico_fechado'].append(ordem_ativa)
-                        st.success(f"✅ Ordem liquidada! Comportamento: {comportamento if comportamento else 'Sem Projeção'}")
+                        st.success(f"✅ Ordem liquidada! Comportamento: {comportamento_final if comportamento_final else 'Sem Projeção'}")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Erro ao fechar ordem no banco: {e}")
@@ -374,7 +431,7 @@ with col_simulador:
 st.divider()
 
 # ==========================================
-# PAINEL INFERIOR (CORREÇÃO DO BUG HTML)
+# PAINEL INFERIOR 
 # ==========================================
 col_abertos, col_fechados = st.columns(2)
 
@@ -382,7 +439,6 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
-            # Renderiza a parte principal do card
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -394,7 +450,6 @@ with col_abertos:
             </div>
             """, unsafe_allow_html=True)
             
-            # Renderiza o HUD de projeção separadamente (se existir) para evitar o bug
             if t.get('teve_projecao'):
                 alvo_str = f"🎯 Alvo: ${t['alvo_planejado']:,.2f}" if t.get('alvo_planejado') else "🎯 Alvo: ---"
                 stop_str = f"🛑 Stop: ${t['stop_planejado']:,.2f}" if t.get('stop_planejado') else "🛑 Stop: ---"
@@ -407,7 +462,6 @@ with col_abertos:
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                # Apenas um espaçamento se não houver HUD
                 st.markdown('<div style="margin-bottom: 10px;"></div>', unsafe_allow_html=True)
     else:
         st.write("Sua carteira está vazia.")
