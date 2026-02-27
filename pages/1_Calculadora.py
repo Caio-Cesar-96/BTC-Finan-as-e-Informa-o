@@ -211,7 +211,7 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
 
-                opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | Valor: ${l['valor_investido_usdt']:,.2f} | {l['data_abertura_br']}" for l in st.session_state['ordens_abertas']}
+                opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | Valor: ${l['valor_investido_usdt']:,.2f} | Preço: ${l['preco_compra']:,.2f}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 preco_venda = st.number_input("Cotação da Venda (USDT)", min_value=0.0, step=100.0, key="preco_venda_input")
@@ -286,9 +286,9 @@ with col_simulador:
     
     col_alvo, col_stop = st.columns(2)
     with col_alvo:
-        alvo_pct = st.number_input("Alvo Desejado (%)", min_value=0, value=0, step=1)
+        alvo_pct = st.number_input("🎯 Alvo Desejado (%)", min_value=0, value=0, step=1)
     with col_stop:
-        stop_pct = st.number_input("Limite de Perda (%)", min_value=0, value=0, step=1)
+        stop_pct = st.number_input("🛑 Limite de Perda (%)", min_value=0, value=0, step=1)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -335,7 +335,7 @@ st.divider()
 col_abertos, col_fechados = st.columns(2)
 
 with col_abertos:
-    st.subheader("🟢 Ordens Abertas na Nuvem")
+    st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
             st.info(f"**Ordem #{t.get('display_id', '???')}** | {t['quantidade_btc']:.8f} BTC\n\nCusto: \${t['valor_investido_usdt']:,.2f} | Preço: \${t['preco_compra']:,.2f}")
@@ -343,7 +343,7 @@ with col_abertos:
         st.write("Sua carteira está vazia.")
 
 with col_fechados:
-    st.subheader("🧾 Últimas Liquidações")
+    st.subheader("🎯 Ordens finalizadas")
     if st.session_state['historico_fechado']:
         for t in reversed(st.session_state['historico_fechado'][-3:]):
             cor_lucro = "#16a34a" if t.get('lucro_usdt', 0) >= 0 else "#dc2626"
@@ -351,7 +351,8 @@ with col_fechados:
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
                 <strong>Ordem #{t.get('display_id', '???')}</strong> <span style="color: gray; font-size: 0.9em;">fechada em {t.get('data_fechamento_br', '')}</span><br>
-                Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong>
+                Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong><br>
+                <span style="color: gray; font-size: 0.85em;">Taxas: &#36;{t.get('total_taxas_usdt', 0):.4f}</span>
             </div>
             """, unsafe_allow_html=True)
     else:
@@ -364,18 +365,16 @@ with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
     if not todas_ordens:
         st.write("Nenhuma ordem encontrada no banco de dados.")
     else:
-        opcoes_del = {o['id']: f"Ordem #{o.get('display_id', '???')} ({o['status']}) | {o['data_abertura_br']} | ${o['valor_investido_usdt']:.2f}" for o in todas_ordens}
+        # Formato de canhoto original restaurado
+        opcoes_del = {o['id']: f"Ordem #{o.get('display_id', '???')} ({o['status']}) | {o.get('data_abertura_br', '')} | ${o['valor_investido_usdt']:,.2f}" for o in todas_ordens}
         ordem_del_id = st.selectbox("Selecione a ordem para excluir permanentemente:", options=list(opcoes_del.keys()), format_func=lambda x: opcoes_del[x])
         
         if st.button("🚨 Apagar Ordem Selecionada", type="primary"):
             try:
-                # Remove do Supabase
                 supabase.table("operacoes").delete().eq("id", ordem_del_id).execute()
-                # Remove do Cérebro Local
                 st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_del_id]
                 st.session_state['historico_fechado'] = [o for o in st.session_state['historico_fechado'] if o['id'] != ordem_del_id]
                 
-                # Recalcula as máscaras para manter a sequência certa (001, 002...)
                 todas_restantes = sorted(st.session_state['ordens_abertas'] + st.session_state['historico_fechado'], key=lambda x: x['id'])
                 for indice, d in enumerate(todas_restantes):
                     d['display_id'] = f"{(indice + 1):03d}"
