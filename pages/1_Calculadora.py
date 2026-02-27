@@ -26,12 +26,17 @@ except Exception as e:
 # --- CSS INSTITUCIONAL ---
 st.markdown("""
     <style>
+        /* MATAR A BARRA LATERAL PADRÃO */
+        [data-testid="collapsedControl"] {display: none !important;}
+        [data-testid="stSidebar"] {display: none !important;}
+        
         [data-testid="stPageLink-NavLink"] {
-            width: fit-content;
+            width: 100%;
             padding: 5px 15px;
             border-radius: 5px;
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
         }
         button[kind="primary"] {
             background-color: #F3BA2F !important;
@@ -86,23 +91,11 @@ st.markdown("""
 # O JUIZ DA DISCIPLINA (MOTOR MATEMÁTICO)
 # ==========================================
 def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
-    """
-    ---------------------------------------------------------
-    RÉGUA DE JULGAMENTO DE DISCIPLINA (Valores de Calibragem)
-    ---------------------------------------------------------
-    1. Sniper: Acima de 90% do Alvo atingido.
-    2. Mão de Alface: De 10% até 90% do Alvo.
-    3. Saída Estratégica (0 a 0): Entre -10% do Stop e +10% do Alvo.
-    4. Resiliência (Stop Técnico): Perda de -10% até -110% do Stop.
-    5. Descontrole (Tilt): Perda superior a -110% do Stop.
-    ---------------------------------------------------------
-    """
     if not alvo and not stop:
         return None
         
     lucro_real = preco_venda - preco_compra
     
-    # Se a ordem foi para o LUCRO (ou zero a zero positivo)
     if lucro_real >= 0:
         if alvo and alvo > preco_compra:
             alvo_esperado = alvo - preco_compra
@@ -113,8 +106,6 @@ def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
             else: return "🛡️ Saída Estratégica"
         else:
             return "⚖️ Ganho Livre"
-            
-    # Se a ordem foi para o PREJUÍZO (ou zero a zero negativo)
     else:
         if stop and stop < preco_compra:
             perda_real = preco_compra - preco_venda
@@ -154,10 +145,13 @@ def carregar_dados_nuvem():
 
 fuso_brasilia = datetime.timezone(datetime.timedelta(hours=-3))
 
-col_titulo, col_botao = st.columns([8, 2], vertical_alignment="center")
+# --- CABEÇALHO E NAVEGAÇÃO ---
+col_titulo, col_btn_home, col_btn_port = st.columns([6, 2, 2], vertical_alignment="center")
 with col_titulo:
     st.title("🧮 Boleta de Operações")
-with col_botao:
+with col_btn_home:
+    st.page_link("pages/0_Terminal.py", label="Voltar ao Terminal", icon="🏠")
+with col_btn_port:
     st.page_link("pages/2_Portfolio.py", label="Ir para Portfólio", icon="💼")
 
 st.divider()
