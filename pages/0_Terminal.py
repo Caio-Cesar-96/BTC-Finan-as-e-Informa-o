@@ -1,12 +1,12 @@
 import streamlit as st
 import requests
 
-# 1. CADEADO DE SEGURANÇA: Verifica se a pessoa passou pelo main.py
-if not st.session_state.get("password_correct", False):
-    st.switch_page("main.py")
-
-# Configuração da página do Terminal
+# 1. CONFIGURAÇÃO (Deve ser obrigatoriamente o 1º comando Streamlit)
 st.set_page_config(page_title="O Conselho BTC", page_icon="🏛️", layout="wide", initial_sidebar_state="collapsed")
+
+# 2. CADEADO DE SEGURANÇA: Verifica a nova variável da v2.3.0
+if not st.session_state.get("autenticado", False):
+    st.switch_page("main.py")
 
 # O CSS com o design dos seus botões
 st.markdown("""
