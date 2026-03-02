@@ -20,7 +20,7 @@ def iniciar_conexao():
 try:
     supabase: Client = iniciar_conexao()
 except Exception as e:
-    st.error(f"Erro de conexão com o Banco de Dados: {e}")
+    st.error("⚠️ Erro ao conectar com o Banco de Dados. Verifique os Secrets.")
     st.stop()
 
 # --- CSS INSTITUCIONAL ---
@@ -129,10 +129,7 @@ def obter_preco_btc():
 
 def carregar_dados_nuvem():
     try:
-        # MUDANÇA: Filtra apenas as operações do usuário logado
-        user_id = st.session_state.get("user_id")
-        resposta = supabase.table("operacoes").select("*").eq("user_id", user_id).execute()
-        
+        resposta = supabase.table("operacoes").select("*").execute()
         dados = resposta.data
         dados_ordenados = sorted(dados, key=lambda x: x['id'])
         
@@ -159,185 +156,359 @@ with col_btn_port:
 
 st.divider()
 
-# --- DADOS E ESTADO ---
-abertas_bd, fechadas_bd = carregar_dados_nuvem()
+if 'dados_sincronizados' not in st.session_state:
+    with st.spinner("Sincronizando com o Banco de Dados..."):
+        abertas, fechadas = carregar_dados_nuvem()
+        st.session_state['ordens_abertas'] = abertas
+        st.session_state['historico_fechado'] = fechadas
+        st.session_state['dados_sincronizados'] = True
 
-if 'dados_operacao' not in st.session_state:
-    st.session_state['dados_operacao'] = {
-        'compra': 0.0, 'stop': 0.0, 'alvo': 0.0,
-        'taxa_entrada': 0.0, 'investimento': 0.0, 'qtd_btc': 0.0
-    }
+if 'val_compra' not in st.session_state: st.session_state['val_compra'] = 0.0
+if 'preco_compra' not in st.session_state: st.session_state['preco_compra'] = 0.0
 
-cotacao_atual = obter_preco_btc()
+# --- LAYOUT PRINCIPAL (50/50) ---
+col_boleta, col_espaco, col_simulador = st.columns([10, 1, 10])
 
-# --- ABAS PRINCIPAIS ---
-aba_calculadora, aba_abertas, aba_historico = st.tabs(["Nova Operação", f"Em Aberto ({len(abertas_bd)})", f"Histórico ({len(fechadas_bd)})"])
-
-# ==================================================
-# ABA 1: CALCULADORA (Boleta de Entrada)
-# ==================================================
-with aba_calculadora:
-    c1, c2, c3 = st.columns(3)
+with col_boleta:
+    aba_compra, aba_venda = st.tabs(["Abrir Ordem", "Fechar Ordem"])
     
-    with c1:
-        st.caption("PARAMETROS DE ENTRADA")
-        investimento = st.number_input("Investimento (USDT)", min_value=0.0, step=10.0, value=100.0)
-        preco_compra = st.number_input("Preço de Entrada (BTC)", min_value=0.0, step=100.0, value=cotacao_atual)
-        
-        qtd_btc = investimento / preco_compra if preco_compra > 0 else 0.0
-        st.metric("Quantidade BTC", f"{qtd_btc:.6f}")
-        
-    with c2:
-        st.caption("GESTÃO DE RISCO")
-        preco_stop = st.number_input("Stop Loss (BTC)", min_value=0.0, step=100.0, value=preco_compra * 0.95)
-        preco_alvo = st.number_input("Alvo / Take Profit (BTC)", min_value=0.0, step=100.0, value=preco_compra * 1.05)
-        
-        risco_usd = (preco_compra - preco_stop) * qtd_btc
-        retorno_usd = (preco_alvo - preco_compra) * qtd_btc
-        ratio = retorno_usd / risco_usd if risco_usd > 0 else 0
-        
-        st.metric("Risco / Retorno", f"1 : {ratio:.1f}")
+    with aba_compra:
+        with st.container(border=True):
+            preco_btc_atual = obter_preco_btc()
+            
+            st.markdown(f"""
+                <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual (BTC/USDT)</span>
+                    <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual:,.2f}</strong>
+                </div>
+            """, unsafe_allow_html=True)
 
-    with c3:
-        st.caption("TAXAS E CUSTOS")
-        taxa_entrada_pct = st.number_input("Taxa Corretora (%)", value=0.1, step=0.01)
-        taxa_entrada_usd = investimento * (taxa_entrada_pct / 100)
-        
-        st.metric("Custo da Entrada", f"${taxa_entrada_usd:.2f}")
-        
-    st.divider()
-    
-    # BOTÃO DE SALVAR
-    col_btn_salvar, _ = st.columns([1, 2])
-    with col_btn_salvar:
-        if st.button("Gravar Operação no Banco de Dados", type="primary", use_container_width=True):
-            if investimento > 0 and preco_compra > 0:
-                agora = datetime.datetime.now(fuso_brasilia)
+            c1, c2 = st.columns(2)
+            with c1:
+                valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
+            with c2:
+                preco_execucao = st.number_input("Cotação de 1 BTC (Preço Pago)", min_value=0.0, step=100.0, key="preco_compra")
                 
-                # MUDANÇA: Inclusão do 'user_id' no payload
-                nova_operacao = {
-                    "user_id": st.session_state["user_id"], # CARIMBO DO USUÁRIO
-                    "data_abertura": str(agora.date()),
-                    "hora_abertura": str(agora.strftime("%H:%M")),
-                    "texto_data_abertura_br": agora.strftime("%d/%m/%Y"),
-                    "valor_investido_usdt": investimento,
-                    "preco_compra": preco_compra,
-                    "quantidade_btc": qtd_btc,
-                    "taxa_entrada_usdt": taxa_entrada_usd,
-                    "status": "Aberto",
-                    # Campos nulos para preencher no fechamento
-                    "preco_venda": None,
-                    "valor_recebido_usdt": None,
-                    "lucro_usdt": None,
-                    "lucro_pct": None,
-                    "total_impostos_usdt": None,
-                    "texto_status": None # O "Juiz" preenche isso no final
-                }
+            quantidade = 0.0
+            if preco_execucao > 0:
+                quantidade = valor_total_usdt / preco_execucao
                 
-                try:
-                    supabase.table("operacoes").insert(nova_operacao).execute()
-                    st.success("Operação registrada com sucesso!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao salvar: {e}")
-            else:
-                st.warning("Preencha os valores corretamente.")
+            st.markdown(f"""
+                <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
+                    <strong>Volume de Compra:</strong> {quantidade:.8f} BTC
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # --- AS DUAS CHAVINHAS ---
+            col_tog1, col_tog2 = st.columns(2)
+            with col_tog1:
+                usar_bnb = st.toggle("Pagar em BNB", value=True, key="toggle_compra_bnb")
+                if usar_bnb:
+                    st.markdown("<div style='margin-bottom: 10px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='margin-bottom: 10px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
+            
+            with col_tog2:
+                c_spacer, c_content = st.columns([1.2, 2])
+                with c_content:
+                    vincular_projecao = st.toggle("Vincular Projeção", value=False, key="toggle_vincular")
+                    alvo_input = st.session_state.get('alvo_simulador', 0)
+                    stop_input = st.session_state.get('stop_simulador', 0)
+                    
+                    if vincular_projecao:
+                        if alvo_input == 0 and stop_input == 0:
+                            st.markdown("<div style='margin-bottom: 10px; text-align: right;'><span style='color: #eab308; font-size: 0.80em;'>⚠️ Simulador zerado. Ordem ficará livre.</span></div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<div style='margin-bottom: 10px; text-align: right;'><span style='color: #22c55e; font-size: 0.80em;'>✅ Vinculado: Alvo {alvo_input}% | Stop {stop_input}%</span></div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div style='margin-bottom: 10px; height: 18px;'></div>", unsafe_allow_html=True)
 
-# ==================================================
-# ABA 2: OPERAÇÕES EM ABERTO (Gestão)
-# ==================================================
-with aba_abertas:
-    if not abertas_bd:
-        st.info("Nenhuma operação em aberto no momento.")
-    else:
-        for op in abertas_bd:
-            with st.expander(f"🆔 {op['display_id']} | Compra: ${op['preco_compra']:,.2f} ({op['texto_data_abertura_br']})"):
-                c1, c2, c3, c4 = st.columns(4)
-                
-                with c1:
-                    st.metric("Investido", f"${op['valor_investido_usdt']:.2f}")
-                with c2:
-                    st.metric("Qtd BTC", f"{op['quantidade_btc']:.6f}")
-                with c3:
-                    # Simulação em Tempo Real
-                    valor_atual = op['quantidade_btc'] * cotacao_atual
-                    pnl_atual = valor_atual - op['valor_investido_usdt']
-                    cor_pnl = "normal" if pnl_atual >= 0 else "off" # Streamlit delta color logic
-                    st.metric("PnL (Agora)", f"${pnl_atual:.2f}", delta=f"{pnl_atual:.2f}")
-                
-                st.divider()
-                st.write("🔴 **ENCERRAR OPERAÇÃO**")
-                
-                col_fecha_1, col_fecha_2, col_fecha_3 = st.columns(3)
-                
-                with col_fecha_1:
-                    preco_saida = st.number_input(f"Preço de Venda (BTC) - ID {op['display_id']}", value=cotacao_atual, step=100.0)
-                with col_fecha_2:
-                    taxa_saida_pct = st.number_input(f"Taxa Saída (%) - ID {op['display_id']}", value=0.1, step=0.01)
-                with col_fecha_3:
-                    # Parâmetros para o Juiz
-                    alvo_definido = st.number_input(f"Alvo Original - ID {op['display_id']}", value=0.0)
-                    stop_definido = st.number_input(f"Stop Original - ID {op['display_id']}", value=0.0)
+            submit_compra = st.button("Executar Compra", type="primary", use_container_width=True)
 
-                if st.button(f"Confirmar Fechamento (ID {op['display_id']})", type="primary"):
-                    # Cálculos Finais
-                    valor_bruto_venda = op['quantidade_btc'] * preco_saida
-                    taxa_saida_usd = valor_bruto_venda * (taxa_saida_pct / 100)
-                    valor_liquido_recebido = valor_bruto_venda - taxa_saida_usd
+            if submit_compra:
+                if valor_total_usdt > 0 and preco_execucao > 0:
+                    id_operacao = f"ORD-{int(datetime.datetime.now().timestamp())}"
+                    agora = datetime.datetime.now(fuso_brasilia)
                     
-                    lucro_final = valor_liquido_recebido - op['valor_investido_usdt']
-                    lucro_pct = (lucro_final / op['valor_investido_usdt']) * 100
-                    custo_total = op['taxa_entrada_usdt'] + taxa_saida_usd
+                    taxa_entrada_usdt = valor_total_usdt * (0.00075 if usar_bnb else 0.001)
+                    quantidade_final = quantidade if usar_bnb else quantidade - (quantidade * 0.001)
                     
-                    agora_fecha = datetime.datetime.now(fuso_brasilia)
+                    teve_projecao = vincular_projecao and (alvo_input > 0 or stop_input > 0)
+                    preco_alvo = float(preco_execucao * (1 + (alvo_input / 100))) if alvo_input > 0 else None
+                    preco_stop = float(preco_execucao * (1 - (stop_input / 100))) if stop_input > 0 else None
                     
-                    # O Veredito do Juiz
-                    veredito = avaliar_comportamento(op['preco_compra'], preco_saida, alvo_definido, stop_definido)
-                    
-                    dados_fechamento = {
-                        "status": "Fechado",
-                        "data_fechamento": str(agora_fecha.date()),
-                        "hora_fechamento": str(agora_fecha.strftime("%H:%M")),
-                        "texto_data_fechamento_br": agora_fecha.strftime("%d/%m/%Y"),
-                        "preco_venda": preco_saida,
-                        "valor_recebido_usdt": valor_liquido_recebido,
-                        "lucro_usdt": lucro_final,
-                        "lucro_pct": lucro_pct,
-                        "total_impostos_usdt": custo_total,
-                        "texto_status": veredito # Gravando a sentença
+                    nova_ordem = {
+                        "id": id_operacao,
+                        "data_abertura": agora.strftime("%Y-%m-%d"),
+                        "hora_abertura": agora.strftime("%H:%M"),
+                        "data_abertura_br": agora.strftime("%d/%m/%Y"), 
+                        "valor_investido_usdt": float(valor_total_usdt),
+                        "quantidade_btc": float(quantidade_final), 
+                        "preco_compra": float(preco_execucao),
+                        "taxa_entrada_usdt": float(taxa_entrada_usdt),
+                        "status": "Aberto",
+                        "teve_projecao": teve_projecao,
+                        "alvo_planejado": preco_alvo if teve_projecao else None,
+                        "stop_planejado": preco_stop if teve_projecao else None,
+                        "comportamento_final": None
                     }
                     
                     try:
-                        # Update seguro usando o ID específico
-                        supabase.table("operacoes").update(dados_fechamento).eq("id", op['id']).execute()
-                        st.toast(f"Operação {op['display_id']} encerrada com sucesso!")
+                        supabase.table("operacoes").insert(nova_ordem).execute()
+                        total_existentes = len(st.session_state['ordens_abertas']) + len(st.session_state['historico_fechado'])
+                        nova_ordem['display_id'] = f"{(total_existentes + 1):03d}"
+                        
+                        st.session_state['ordens_abertas'].append(nova_ordem)
+                        st.success("✅ Ordem salva na nuvem com sucesso!")
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Erro ao fechar: {e}")
+                        st.error(f"Erro ao salvar no banco: {e}")
 
-# ==================================================
-# ABA 3: HISTÓRICO (Diário de Bordo)
-# ==================================================
-with aba_historico:
-    if not fechadas_bd:
-        st.info("Nenhuma operação finalizada ainda.")
-    else:
-        # Exibir da mais recente para a mais antiga
-        for op in reversed(fechadas_bd):
-            cor_card = "rgba(22, 163, 74, 0.1)" if op['lucro_usdt'] >= 0 else "rgba(220, 38, 38, 0.1)"
-            borda = "#16a34a" if op['lucro_usdt'] >= 0 else "#dc2626"
-            emoji_juiz = op['texto_status'] if op['texto_status'] else "---"
-            
-            st.markdown(f"""
-                <div style="background-color: {cor_card}; border-left: 5px solid {borda}; padding: 15px; border-radius: 5px; margin-bottom: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: bold; font-size: 1.1em;">🆔 {op['display_id']} | {op['texto_data_abertura_br']} ➝ {op['texto_data_fechamento_br']}</span>
-                        <span style="font-size: 0.9em; background-color: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 15px;">{emoji_juiz}</span>
+    with aba_venda:
+        with st.container(border=True):
+            if not st.session_state['ordens_abertas']:
+                st.info("Nenhuma ordem aberta no banco de dados.")
+            else:
+                preco_btc_atual_venda = obter_preco_btc()
+                
+                st.markdown(f"""
+                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="color: #9ca3af; font-size: 0.95em;">Cotação Atual (BTC/USDT)</span>
+                        <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_btc_atual_venda:,.2f}</strong>
                     </div>
-                    <div style="margin-top: 10px; display: flex; gap: 20px;">
-                        <span>Entrada: <b>${op['preco_compra']:,.2f}</b></span>
-                        <span>Saída: <b>${op['preco_venda']:,.2f}</b></span>
-                        <span>Resultado: <b style="color: {borda};">${op['lucro_usdt']:.2f} ({op['lucro_pct']:.2f}%)</b></span>
+                """, unsafe_allow_html=True)
+
+                opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | Valor: ${l['valor_investido_usdt']:,.2f} | Preço: ${l['preco_compra']:,.2f}" for l in st.session_state['ordens_abertas']}
+                ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
+                
+                preco_venda = st.number_input("Cotação da Venda (USDT)", min_value=0.0, step=100.0, key="preco_venda_input")
+                
+                usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda_bnb")
+                if usar_bnb_venda:
+                    st.markdown("<div style='margin-bottom: 5px;'><span style='background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.075%</span></div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='margin-bottom: 5px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
+                
+                ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
+                valor_bruto_venda = float(ordem_ativa['quantidade_btc']) * preco_venda
+                
+                if preco_venda > 0:
+                    prev_taxa_saida = valor_bruto_venda * (0.00075 if usar_bnb_venda else 0.0010)
+                    taxa_entrada = float(ordem_ativa.get('taxa_entrada_usdt', 0.0))
+                    
+                    prev_valor_liquido = valor_bruto_venda - prev_taxa_saida
+                    prev_lucro_usdt = prev_valor_liquido - float(ordem_ativa['valor_investido_usdt'])
+                    prev_lucro_pct = (prev_lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
+                    
+                    sinal_prev = "+" if prev_lucro_usdt >= 0 else "-"
+                    cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
+                    
+                    # PROJEÇÃO DO VEREDITO (GATILHO PSICOLÓGICO)
+                    comportamento_prev = None
+                    if ordem_ativa.get('teve_projecao'):
+                        comportamento_prev = avaliar_comportamento(
+                            float(ordem_ativa['preco_compra']), 
+                            preco_venda, 
+                            float(ordem_ativa.get('alvo_planejado')) if ordem_ativa.get('alvo_planejado') else None,
+                            float(ordem_ativa.get('stop_planejado')) if ordem_ativa.get('stop_planejado') else None
+                        )
+
+                    html_veredito = ""
+                    if comportamento_prev:
+                        cor_ver = "#22c55e" if "Sniper" in comportamento_prev else "#eab308" if "Alface" in comportamento_prev else "#ef4444" if "Descontrole" in comportamento_prev else "gray"
+                        html_veredito = f"""
+                        <div style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase;">Projeção de Disciplina:</span>
+                            <strong style="color: {cor_ver}; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; font-size: 0.9em;">{comportamento_prev}</strong>
+                        </div>
+                        """
+                    
+                    st.markdown(f"""
+                        <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
+                            <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
+                            {html_veredito}
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                submit_venda = st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True)
+                
+                if submit_venda and preco_venda > 0:
+                    taxa_saida_usdt = valor_bruto_venda * (0.00075 if usar_bnb_venda else 0.0010)
+                    total_taxas_operacao = taxa_entrada + taxa_saida_usdt
+                    
+                    valor_liquido_recebido = valor_bruto_venda - taxa_saida_usdt
+                    lucro_usdt = valor_liquido_recebido - float(ordem_ativa['valor_investido_usdt'])
+                    lucro_pct = (lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
+                    agora_venda = datetime.datetime.now(fuso_brasilia)
+                    
+                    # CARIMBO FINAL USANDO A FUNÇÃO MASTER
+                    comportamento_final = None
+                    if ordem_ativa.get('teve_projecao'):
+                        comportamento_final = avaliar_comportamento(
+                            float(ordem_ativa['preco_compra']), 
+                            preco_venda, 
+                            float(ordem_ativa.get('alvo_planejado')) if ordem_ativa.get('alvo_planejado') else None,
+                            float(ordem_ativa.get('stop_planejado')) if ordem_ativa.get('stop_planejado') else None
+                        )
+
+                    dados_atualizacao = {
+                        'status': "Fechado",
+                        'data_fechamento': agora_venda.strftime("%Y-%m-%d"),
+                        'data_fechamento_br': agora_venda.strftime("%d/%m/%Y"),
+                        'hora_fechamento': agora_venda.strftime("%H:%M"),
+                        'preco_venda': float(preco_venda),
+                        'valor_recebido_usdt': float(valor_liquido_recebido),
+                        'lucro_usdt': float(lucro_usdt),
+                        'lucro_pct': float(lucro_pct),
+                        'total_taxas_usdt': float(total_taxas_operacao),
+                        'comportamento_final': comportamento_final
+                    }
+                    
+                    try:
+                        supabase.table("operacoes").update(dados_atualizacao).eq("id", ordem_ativa['id']).execute()
+                        
+                        ordem_ativa.update(dados_atualizacao)
+                        st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
+                        st.session_state['historico_fechado'].append(ordem_ativa)
+                        st.success(f"✅ Ordem liquidada! Comportamento: {comportamento_final if comportamento_final else 'Sem Projeção'}")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao fechar ordem no banco: {e}")
+
+with col_simulador:
+    st.subheader("Projeção de Risco e Retorno")
+    st.markdown("<div style='color: gray; font-size: 0.9em; margin-bottom: 15px;'>Calcule os cenários antes de abrir a ordem na corretora.</div>", unsafe_allow_html=True)
+    
+    val_sim = st.session_state.get('val_compra', 0.0)
+    preco_sim = st.session_state.get('preco_compra', 0.0)
+    
+    col_alvo, col_stop = st.columns(2)
+    with col_alvo:
+        alvo_pct = st.number_input("🎯 Alvo Desejado (%)", min_value=0, value=0, step=1, key="alvo_simulador")
+    with col_stop:
+        stop_pct = st.number_input("🛑 Limite de Perda (%)", min_value=0, value=0, step=1, key="stop_simulador")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    preco_alvo = preco_sim * (1 + (alvo_pct / 100)) if preco_sim > 0 else 0.0
+    preco_stop = preco_sim * (1 - (stop_pct / 100)) if preco_sim > 0 else 0.0
+    lucro_potencial = val_sim * (alvo_pct / 100)
+    risco_potencial = val_sim * (stop_pct / 100)
+    relacao_rr = (lucro_potencial / risco_potencial) if risco_potencial > 0 else 0.0
+
+    s1, s2 = st.columns(2)
+    with s1:
+        st.markdown(f"""
+            <div class="sim-card" style="border-top: 3px solid #16a34a;">
+                <div class="sim-title">Lucro Alvo</div>
+                <div class="sim-val" style="color: #22c55e;">+${lucro_potencial:.2f}</div>
+                <div style="font-size: 0.8em; color: gray; margin-top: 5px;">Vender a ${preco_alvo:,.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    with s2:
+        st.markdown(f"""
+            <div class="sim-card" style="border-top: 3px solid #dc2626;">
+                <div class="sim-title">Risco Máximo</div>
+                <div class="sim-val" style="color: #ef4444;">-${risco_potencial:.2f}</div>
+                <div style="font-size: 0.8em; color: gray; margin-top: 5px;">Stop em ${preco_stop:,.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    cor_rr = "#22c55e" if relacao_rr >= 2.0 else "#eab308" if relacao_rr >= 1.0 else "#ef4444"
+    st.markdown(f"""
+        <div class="sim-card" style="border-left: 4px solid {cor_rr}; text-align: left; padding: 20px;">
+            <div class="sim-title">Relação Risco / Retorno</div>
+            <div class="sim-val" style="color: {cor_rr}; font-size: 1.8em;">1 : {relacao_rr:.1f}</div>
+            <div style="font-size: 0.85em; color: gray; margin-top: 5px;">Para cada dólar em risco, você projeta um retorno de ${relacao_rr:.2f}.</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.divider()
+
+# ==========================================
+# PAINEL INFERIOR 
+# ==========================================
+col_abertos, col_fechados = st.columns(2)
+
+with col_abertos:
+    st.subheader("🟢 Ordens Abertas")
+    if st.session_state['ordens_abertas']:
+        for t in reversed(st.session_state['ordens_abertas']):
+            st.markdown(f"""
+            <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <strong style="color: white; font-size: 1.1em;">Ordem #{t.get('display_id', '???')}</strong>
+                    <span style="color: #F3BA2F; font-weight: bold;">{t['quantidade_btc']:.8f} BTC</span>
+                </div>
+                <div style="color: #9ca3af; font-size: 0.9em; margin-bottom: 4px;">Custo: <strong style="color: white;">${t['valor_investido_usdt']:,.2f}</strong></div>
+                <div style="color: #9ca3af; font-size: 0.9em;">Preço Pago: <strong style="color: white;">${t['preco_compra']:,.2f}</strong></div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if t.get('teve_projecao'):
+                alvo_str = f"🎯 Alvo: ${t['alvo_planejado']:,.2f}" if t.get('alvo_planejado') else "🎯 Alvo: ---"
+                stop_str = f"🛑 Stop: ${t['stop_planejado']:,.2f}" if t.get('stop_planejado') else "🛑 Stop: ---"
+                st.markdown(f"""
+                <div style="background-color: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 0 0 8px 8px; margin-bottom: 10px; border-left: 4px solid #3b82f6; border-top: 1px dashed rgba(255,255,255,0.1);">
+                     <div style="display: flex; justify-content: space-between; font-size: 0.85em;">
+                        <span style="color: #22c55e;">{alvo_str}</span>
+                        <span style="color: #ef4444;">{stop_str}</span>
                     </div>
                 </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown('<div style="margin-bottom: 10px;"></div>', unsafe_allow_html=True)
+    else:
+        st.write("Sua carteira está vazia.")
+
+with col_fechados:
+    st.subheader("🎯 Ordens finalizadas")
+    if st.session_state['historico_fechado']:
+        for t in reversed(st.session_state['historico_fechado'][-3:]):
+            cor_lucro = "#16a34a" if t.get('lucro_usdt', 0) >= 0 else "#dc2626"
+            sinal = "+" if t.get('lucro_usdt', 0) >= 0 else ""
+            
+            html_comportamento = ""
+            comp = t.get('comportamento_final')
+            if comp:
+                html_comportamento = f"""<div style="margin-top: 8px; font-size: 0.8em; display: inline-block; padding: 2px 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; color: #e2e8f0;">{comp}</div>"""
+                
+            # TAG DE DATA REMOVIDA DAQUI
+            st.markdown(f"""
+            <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
+                <strong>Ordem #{t.get('display_id', '???')}</strong><br>
+                Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong><br>
+                <span style="color: gray; font-size: 0.85em;">Taxas: &#36;{t.get('total_taxas_usdt', 0):.4f}</span><br>
+                {html_comportamento}
+            </div>
             """, unsafe_allow_html=True)
+    else:
+        st.write("Nenhuma venda realizada ainda.")
+
+# === ZONA DE PERIGO ===
+st.markdown("<br>", unsafe_allow_html=True)
+with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
+    todas_ordens = st.session_state['ordens_abertas'] + st.session_state['historico_fechado']
+    if not todas_ordens:
+        st.write("Nenhuma ordem encontrada no banco de dados.")
+    else:
+        opcoes_del = {o['id']: f"Ordem #{o.get('display_id', '???')} ({o['status']}) | {o.get('data_abertura_br', '')} | ${o['valor_investido_usdt']:,.2f}" for o in todas_ordens}
+        ordem_del_id = st.selectbox("Selecione a ordem para excluir permanentemente:", options=list(opcoes_del.keys()), format_func=lambda x: opcoes_del[x])
+        
+        if st.button("🚨 Apagar Ordem Selecionada", type="primary"):
+            try:
+                supabase.table("operacoes").delete().eq("id", ordem_del_id).execute()
+                st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_del_id]
+                st.session_state['historico_fechado'] = [o for o in st.session_state['historico_fechado'] if o['id'] != ordem_del_id]
+                
+                todas_restantes = sorted(st.session_state['ordens_abertas'] + st.session_state['historico_fechado'], key=lambda x: x['id'])
+                for indice, d in enumerate(todas_restantes):
+                    d['display_id'] = f"{(indice + 1):03d}"
+                    
+                st.success("Ordem apagada com sucesso e numeração reorganizada!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro ao apagar ordem no banco: {e}")
