@@ -96,7 +96,10 @@ def obter_preco_btc():
 
 def carregar_dados_nuvem():
     try:
-        resposta = supabase.table("operacoes").select("*").execute()
+        # [MODIFICAÇÃO ÚNICA]: Filtra apenas dados do usuário logado
+        user_id = st.session_state.get("user_id")
+        resposta = supabase.table("operacoes").select("*").eq("user_id", user_id).execute()
+        
         dados = resposta.data
         dados_ordenados = sorted(dados, key=lambda x: x['id'])
         
