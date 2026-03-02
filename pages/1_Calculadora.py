@@ -129,7 +129,10 @@ def obter_preco_btc():
 
 def carregar_dados_nuvem():
     try:
-        resposta = supabase.table("operacoes").select("*").execute()
+        # [MODIFICAÇÃO 1] Filtra apenas dados do dono
+        user_id = st.session_state.get("user_id") 
+        resposta = supabase.table("operacoes").select("*").eq("user_id", user_id).execute()
+        
         dados = resposta.data
         dados_ordenados = sorted(dados, key=lambda x: x['id'])
         
@@ -239,6 +242,7 @@ with col_boleta:
                     
                     nova_ordem = {
                         "id": id_operacao,
+                        "user_id": st.session_state.get("user_id"), # [MODIFICAÇÃO 2] Carimbo de Dono
                         "data_abertura": agora.strftime("%Y-%m-%d"),
                         "hora_abertura": agora.strftime("%H:%M"),
                         "data_abertura_br": agora.strftime("%d/%m/%Y"), 
@@ -366,6 +370,7 @@ with col_boleta:
                     }
                     
                     try:
+                        # Aqui não precisa alterar pois ele busca pelo ID único da ordem, que já foi carregada corretamente lá em cima
                         supabase.table("operacoes").update(dados_atualizacao).eq("id", ordem_ativa['id']).execute()
                         
                         ordem_ativa.update(dados_atualizacao)
@@ -500,7 +505,10 @@ with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
         
         if st.button("🚨 Apagar Ordem Selecionada", type="primary"):
             try:
-                supabase.table("operacoes").delete().eq("id", ordem_del_id).execute()
+                # [MODIFICAÇÃO 3] Segurança Extra na Exclusão
+                user_id = st.session_state.get("user_id")
+                supabase.table("operacoes").delete().eq("id", ordem_del_id).eq("user_id", user_id).execute()
+                
                 st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_del_id]
                 st.session_state['historico_fechado'] = [o for o in st.session_state['historico_fechado'] if o['id'] != ordem_del_id]
                 
