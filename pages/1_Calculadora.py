@@ -25,7 +25,7 @@ except Exception as e:
 
 # --- CONFIGURAÇÃO DE ATIVOS (MULTIMOEDAS) ---
 ASSETS_CONFIG = {
-    "BTC": {"nome": "Bitcoin", "icon": "₿", "cor": "#F3BA2F"},
+    "BTC": {"nome": "Bitcoin", "icon": "🟠", "cor": "#F3BA2F"}, # [AJUSTE 1] Ícone novo
     "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
     "SOL": {"nome": "Solana", "icon": "🟣", "cor": "#14F195"},
     "BNB": {"nome": "Binance Coin", "icon": "🟡", "cor": "#F3BA2F"},
@@ -93,25 +93,6 @@ st.markdown("""
             font-weight: bold;
             color: white;
         }
-        
-        /* CSS ESPECIAL PARA O CARD DE COTAÇÃO "FAKE" */
-        .fake-input-box {
-            background-color: #0e1117; /* Cor exata do fundo do input dark mode */
-            border: 1px solid rgba(250, 250, 250, 0.2);
-            border-radius: 0.5rem;
-            padding: 0px 12px;
-            height: 46px; /* Altura exata do st.selectbox */
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-family: "Source Sans Pro", sans-serif;
-        }
-        .fake-label {
-            font-size: 14px;
-            color: rgba(250, 250, 250, 0.6); /* Cor exata do label Streamlit */
-            margin-bottom: 0.5rem;
-            font-family: "Source Sans Pro", sans-serif;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -121,36 +102,29 @@ st.markdown("""
 def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
     if not alvo and not stop:
         return None
-        
     lucro_real = preco_venda - preco_compra
-    
     if lucro_real >= 0:
         if alvo and alvo > preco_compra:
             alvo_esperado = alvo - preco_compra
             pct_alcancado = lucro_real / alvo_esperado
-            
             if pct_alcancado >= 0.90: return "🏆 Sniper"
             elif pct_alcancado > 0.10: return "🥬 Mão de Alface"
             else: return "🛡️ Saída Estratégica"
-        else:
-            return "⚖️ Ganho Livre"
+        else: return "⚖️ Ganho Livre"
     else:
         if stop and stop < preco_compra:
             perda_real = preco_compra - preco_venda
             stop_maximo = preco_compra - stop
             pct_perdido = perda_real / stop_maximo
-            
             if pct_perdido <= 0.10: return "🛡️ Saída Estratégica"
             elif pct_perdido <= 1.10: return "🛑 Resiliência"
             else: return "💥 Descontrole"
-        else:
-            return "💥 Perda Livre"
+        else: return "💥 Perda Livre"
 
 # --- FUNÇÕES DE API E SINCRONIZAÇÃO ---
 def obter_cotacao(simbolo):
     if not simbolo: return 0.0
     try:
-        # Monta o par (Ex: BTC + USDT = BTCUSDT)
         par = f"{simbolo}USDT"
         url = f"https://api.binance.us/api/v3/ticker/price?symbol={par}"
         resposta = requests.get(url, timeout=3)
@@ -211,7 +185,6 @@ with col_boleta:
         with st.container(border=True):
             
             # --- ROW 1: SELETOR E CARD "GÊMEO" ---
-            # Usamos CSS personalizado (.fake-input-box) para imitar exatamente o selectbox
             col_sel_1, col_sel_2 = st.columns(2)
             
             with col_sel_1:
@@ -225,13 +198,22 @@ with col_boleta:
             cotacao_atual = obter_cotacao(ativo_selecionado)
             
             with col_sel_2:
-                # Estrutura HTML que clona a altura, margem e fonte do componente do Streamlit
+                # Estrutura visual alinhada
                 st.markdown(f"""
                     <div>
-                        <div class="fake-label">Cotação Atual ({ativo_selecionado})</div>
-                        <div class="fake-input-box">
-                            <span style="font-size: 1rem; color: #F3BA2F; font-weight: 600;">${cotacao_atual:,.2f}</span>
-                            <span style="font-size: 0.8rem; color: #808495;">USDT</span>
+                        <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem; font-family: 'Source Sans Pro', sans-serif;">Cotação Atual ({ativo_selecionado})</div>
+                        <div style="
+                            background-color: #0e1117; 
+                            border: 1px solid rgba(250, 250, 250, 0.2); 
+                            border-radius: 0.5rem;
+                            padding: 0 1rem;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            min-height: 46px; /* Altura do input padrão */
+                        ">
+                            <strong style="font-size: 1.1em; color: #F3BA2F; font-family: monospace;">${cotacao_atual:,.2f}</strong>
+                            <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -327,7 +309,8 @@ with col_boleta:
             if not st.session_state['ordens_abertas']:
                 st.info("Nenhuma ordem aberta no banco de dados.")
             else:
-                opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | {l.get('simbolo', 'BTC')} | Valor: ${l['valor_investido_usdt']:,.2f}" for l in st.session_state['ordens_abertas']}
+                # [AJUSTE 3] LISTA MAIS RICA: AGORA MOSTRA O 'PAGO: $...'
+                opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | {l.get('simbolo', 'BTC')} | Investido: ${l['valor_investido_usdt']:,.2f} | Pago: ${l['preco_compra']:,.2f}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
                 ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
@@ -335,17 +318,28 @@ with col_boleta:
                 
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 
-                # Card de cotação atual na aba de venda também alinhado
+                # Card de cotação alinhado
                 st.markdown(f"""
                     <div>
-                        <div class="fake-label">Mercado Atual ({simbolo_ativo})</div>
-                        <div class="fake-input-box">
-                            <span style="font-size: 1rem; color: #F3BA2F; font-weight: 600;">${preco_atual_venda:,.2f}</span>
-                            <span style="font-size: 0.8rem; color: #808495;">USDT</span>
+                        <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem; font-family: 'Source Sans Pro', sans-serif;">Mercado Atual ({simbolo_ativo})</div>
+                        <div style="
+                            background-color: #0e1117; 
+                            border: 1px solid rgba(250, 250, 250, 0.2); 
+                            border-radius: 0.5rem;
+                            padding: 0 1rem;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            min-height: 46px; 
+                        ">
+                            <strong style="font-size: 1.1em; color: #F3BA2F; font-family: monospace;">${preco_atual_venda:,.2f}</strong>
+                            <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
                 
+                st.markdown("<br>", unsafe_allow_html=True)
+
                 preco_venda = st.number_input(f"Cotação da Venda ({simbolo_ativo})", min_value=0.0, step=0.01, format="%.2f", key="preco_venda_input")
                 
                 usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda_bnb")
@@ -545,12 +539,13 @@ with col_fechados:
             comp = t.get('comportamento_final')
             if comp:
                 html_comportamento = f"""<div style="margin-top: 8px; font-size: 0.8em; display: inline-block; padding: 2px 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; color: #e2e8f0;">{comp}</div>"""
-                
+            
+            # [AJUSTE 2] BADGE DESTAQUE NAS ORDENS FECHADAS (IGUAL ABERTAS)
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
                 <div style="display: flex; justify-content: space-between;">
                     <strong>Ordem #{t.get('display_id', '???')}</strong>
-                    <span style="font-size: 0.8em; color: gray;">{simbolo_display}</span>
+                    <span style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; color: #F3BA2F;">{simbolo_display}</span>
                 </div>
                 Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong><br>
                 <span style="color: gray; font-size: 0.85em;">Taxas: &#36;{t.get('total_taxas_usdt', 0):.4f}</span><br>
