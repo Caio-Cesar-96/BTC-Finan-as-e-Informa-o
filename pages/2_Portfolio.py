@@ -810,69 +810,68 @@ else:
 # SEÇÃO NOVA: COFRE DOS ATIVOS (DESEMPENHO INDIVIDUAL)
 # =========================================================
 
-# CSS ESPECÍFICO PARA OS CARDS "WIDE" (LISTA LATERAL)
-# Ajustado para evitar que o Streamlit entenda como código
+# CSS ESPECÍFICO PARA OS CARDS "WIDE"
 st.markdown("""
 <style>
 .asset-row {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-top: 3px solid #F3BA2F; /* Borda Dourada Padrão */
-    border-radius: 8px;
-    padding: 20px 30px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-top: 3px solid #F3BA2F !important; /* DOURADO FIXO */
+    border-radius: 8px !important;
+    padding: 20px 30px !important;
+    margin-bottom: 15px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 .asset-row:hover {
-    transform: translateX(5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+    transform: translateX(5px) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)) !important;
 }
 .asset-identity {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    width: 25%; /* Largura fixa para alinhar */
+    display: flex !important;
+    align-items: center !important;
+    gap: 20px !important;
+    width: 25% !important;
 }
 .asset-icon-large {
-    font-size: 2.2em;
+    font-size: 2.2em !important;
 }
 .asset-name-large {
-    font-size: 1.4em;
-    font-weight: bold;
-    color: white;
-    letter-spacing: 1px;
+    font-size: 1.4em !important;
+    font-weight: bold !important;
+    color: white !important;
+    letter-spacing: 1px !important;
 }
 .asset-stats-container {
-    display: flex;
-    justify-content: space-around;
-    flex-grow: 1;
-    align-items: center;
+    display: flex !important;
+    justify-content: space-around !important;
+    flex-grow: 1 !important;
+    align-items: center !important;
 }
 .asset-stat-box {
-    text-align: center;
-    min-width: 100px;
+    text-align: center !important;
+    min-width: 100px !important;
 }
 .asset-label {
-    font-size: 0.75em;
-    color: #9ca3af;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-    font-family: sans-serif;
+    font-size: 0.75em !important;
+    color: #9ca3af !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 6px !important;
+    font-family: sans-serif !important;
 }
 .asset-value {
-    font-size: 1.3em;
-    font-weight: bold;
-    font-family: sans-serif;
+    font-size: 1.3em !important;
+    font-weight: bold !important;
+    font-family: sans-serif !important;
 }
 .vertical-divider {
-    width: 1px;
-    height: 35px;
-    background-color: rgba(255, 255, 255, 0.1);
+    width: 1px !important;
+    height: 35px !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -901,53 +900,40 @@ else:
             
     ativos_listados = list(dados_por_ativo.keys())
     
-    # 2. Renderizar Lista Vertical (Cards Wide)
+    # 2. Renderizar Lista Vertical
     for simb in ativos_listados:
         stats = dados_por_ativo[simb]
         win_rate_asset = (stats['wins'] / stats['total']) * 100 if stats['total'] > 0 else 0.0
         
-        # Cores condicionais apenas para os números (Texto)
         cor_lucro = "#22c55e" if stats['lucro'] >= 0 else "#ef4444"
         sinal_lucro = "+" if stats['lucro'] >= 0 else ""
         cor_wr = "#22c55e" if win_rate_asset >= 50 else "#e2e8f0"
         
-        # Ícone
         icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
         
-        # HTML construído sem indentação excessiva para evitar bug do markdown
+        # IMPORTANTE: A string abaixo está sem indentação para evitar bugs visuais
         html_card = f"""
 <div class="asset-row">
-    <div class="asset-identity">
-        <div class="asset-icon-large">{icone}</div>
-        <div class="asset-name-large">{simb}</div>
-    </div>
-    
-    <div class="asset-stats-container">
-        <div class="asset-stat-box">
-            <div class="asset-label">Resultado Líquido</div>
-            <div class="asset-value" style="color: {cor_lucro};">
-                {sinal_lucro}${stats['lucro']:,.2f}
-            </div>
-        </div>
-        
-        <div class="vertical-divider"></div>
-        
-        <div class="asset-stat-box">
-            <div class="asset-label">Win Rate</div>
-            <div class="asset-value" style="color: {cor_wr};">
-                {win_rate_asset:.0f}%
-            </div>
-        </div>
-        
-        <div class="vertical-divider"></div>
-        
-        <div class="asset-stat-box">
-            <div class="asset-label">Total Trades</div>
-            <div class="asset-value" style="color: white;">
-                {stats['total']}
-            </div>
-        </div>
-    </div>
+<div class="asset-identity">
+<div class="asset-icon-large">{icone}</div>
+<div class="asset-name-large">{simb}</div>
+</div>
+<div class="asset-stats-container">
+<div class="asset-stat-box">
+<div class="asset-label">Resultado Líquido</div>
+<div class="asset-value" style="color: {cor_lucro};">{sinal_lucro}${stats['lucro']:,.2f}</div>
+</div>
+<div class="vertical-divider"></div>
+<div class="asset-stat-box">
+<div class="asset-label">Win Rate</div>
+<div class="asset-value" style="color: {cor_wr};">{win_rate_asset:.0f}%</div>
+</div>
+<div class="vertical-divider"></div>
+<div class="asset-stat-box">
+<div class="asset-label">Total Trades</div>
+<div class="asset-value" style="color: white;">{stats['total']}</div>
+</div>
+</div>
 </div>
 """
         st.markdown(html_card, unsafe_allow_html=True)
