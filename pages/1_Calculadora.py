@@ -24,13 +24,13 @@ except Exception as e:
     st.stop()
 
 # --- CONFIGURAÇÃO DE ATIVOS (MULTIMOEDAS) ---
-# Aqui deixei o espaço preparado. Futuramente trocaremos os ícones por Imagens Base64.
+# Ordem definida: O primeiro (BTC) será o padrão
 ASSETS_CONFIG = {
-    "BTC": {"nome": "Bitcoin", "icon": "₿", "cor": "#F3BA2F"},
-    "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
-    "SOL": {"nome": "Solana", "icon": "🟣", "cor": "#14F195"},
-    "BNB": {"nome": "Binance Coin", "icon": "🟡", "cor": "#F3BA2F"},
-    "PAXG": {"nome": "PAX Gold", "icon": "🏆", "cor": "#D4AF37"}
+    "BTC": {"nome": "Bitcoin", "icon": "₿"},
+    "ETH": {"nome": "Ethereum", "icon": "💠"},
+    "SOL": {"nome": "Solana", "icon": "🟣"},
+    "BNB": {"nome": "Binance Coin", "icon": "🟡"},
+    "PAXG": {"nome": "PAX Gold", "icon": "🏆"}
 }
 
 # --- CSS INSTITUCIONAL ---
@@ -130,6 +130,7 @@ def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
 
 # --- FUNÇÕES DE API E SINCRONIZAÇÃO ---
 def obter_cotacao(simbolo):
+    if not simbolo: return 0.0
     try:
         # Monta o par (Ex: BTC + USDT = BTCUSDT)
         par = f"{simbolo}USDT"
@@ -149,7 +150,7 @@ def carregar_dados_nuvem():
         
         for indice, d in enumerate(dados_ordenados):
             d['display_id'] = f"{(indice + 1):03d}"
-            # Garante compatibilidade com ordens antigas que podem não ter símbolo ainda
+            # Garante compatibilidade com ordens antigas
             if 'simbolo' not in d or not d['simbolo']:
                 d['simbolo'] = 'BTC'
             
@@ -192,13 +193,16 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- SELETOR DE ATIVOS (NOVA FUNCIONALIDADE) ---
-            col_sel_1, col_sel_2 = st.columns([1, 2])
+            # --- SELETOR DE ATIVOS (VISUAL AJUSTADO) ---
+            # 'vertical_alignment="bottom"' alinha o texto com a caixa de seleção
+            col_sel_1, col_sel_2 = st.columns([1, 1.5], vertical_alignment="bottom")
+            
             with col_sel_1:
                 # O usuário escolhe a moeda aqui
                 ativo_selecionado = st.selectbox(
-                    "Ativo", 
+                    "Escolha o Ativo", 
                     options=list(ASSETS_CONFIG.keys()),
+                    index=0, # Garante que BTC (índice 0) seja o padrão
                     format_func=lambda x: f"{ASSETS_CONFIG[x]['icon']} {x}"
                 )
             
@@ -206,12 +210,11 @@ with col_boleta:
             cotacao_atual = obter_cotacao(ativo_selecionado)
             
             with col_sel_2:
-                # Exibe o preço da moeda selecionada
-                cor_ativo = ASSETS_CONFIG[ativo_selecionado]['cor']
+                # Exibe o preço da moeda selecionada (Simples e Dourado)
                 st.markdown(f"""
-                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 8px; text-align: right;">
-                        <span style="color: #9ca3af; font-size: 0.8em; display: block;">Cotação Atual ({ativo_selecionado})</span>
-                        <strong style="font-size: 1.2em; color: {cor_ativo};">${cotacao_atual:,.2f}</strong>
+                    <div style="margin-bottom: 5px;">
+                        <span style="color: #9ca3af; font-size: 0.9em; margin-right: 8px;">Cotação Atual ({ativo_selecionado}):</span>
+                        <strong style="font-size: 1.4em; color: #F3BA2F;">${cotacao_atual:,.2f}</strong>
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -276,12 +279,12 @@ with col_boleta:
                     nova_ordem = {
                         "id": id_operacao,
                         "user_id": st.session_state.get("user_id"),
-                        "simbolo": ativo_selecionado, # [NOVO] Salvando o ativo escolhido
+                        "simbolo": ativo_selecionado, 
                         "data_abertura": agora.strftime("%Y-%m-%d"),
                         "hora_abertura": agora.strftime("%H:%M"),
                         "data_abertura_br": agora.strftime("%d/%m/%Y"), 
                         "valor_investido_usdt": float(valor_total_usdt),
-                        "quantidade_btc": float(quantidade_final), # Mantemos o nome da coluna 'quantidade_btc' por enquanto para não quebrar a estrutura, mas guarda qualquer moeda.
+                        "quantidade_btc": float(quantidade_final), 
                         "preco_compra": float(preco_execucao),
                         "taxa_entrada_usdt": float(taxa_entrada_usdt),
                         "status": "Aberto",
