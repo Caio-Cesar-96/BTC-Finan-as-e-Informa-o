@@ -479,4 +479,96 @@ with col_lateral:
         
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
+# =========================================================
+# NOVA SEÇÃO: DNA OPERACIONAL (SEGUNDO PLANO)
+# =========================================================
+
+# SEPARADOR VISUAL (A "LISTRA SIMPLES" QUE VOCÊ PEDIU)
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown("""
+    <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
+""", unsafe_allow_html=True)
+
+st.subheader("🧬 DNA Operacional (Análise Comportamental)")
+
+if not historico_fechado:
+    st.info("O perfil comportamental será gerado após o fechamento das primeiras operações com projeção (Alvo/Stop).")
+else:
+    # 1. PROCESSAMENTO DOS DADOS (SEM GANHO LIVRE / PERDA LIVRE)
+    contagem_comportamento = {
+        "🏆 Sniper": 0,
+        "🥬 Mão de Alface": 0,
+        "🛡️ Saída Estratégica": 0,
+        "🛑 Resiliência": 0,
+        "💥 Descontrole": 0
+    }
+    
+    total_validos = 0
+    for o in historico_fechado:
+        comp = o.get('comportamento_final')
+        # SÓ CONTA SE ESTIVER NA LISTA OFICIAL (Ignora Ganho Livre/Perda Livre)
+        if comp and comp in contagem_comportamento:
+            contagem_comportamento[comp] += 1
+            total_validos += 1
+            
+    # Filtra apenas o que tem dados para não poluir o gráfico
+    dados_grafico = {k: v for k, v in contagem_comportamento.items() if v > 0}
+    
+    if total_validos == 0:
+        st.warning("Nenhuma operação qualificada (com Alvo/Stop definidos) foi encerrada ainda.")
+    else:
+        col_dna_grafico, col_dna_barras = st.columns([1, 2], gap="large")
+        
+        # CORES OFICIAIS
+        cores_map = {
+            "🏆 Sniper": "#22c55e",       # Verde Neon
+            "🥬 Mão de Alface": "#eab308",# Amarelo Ouro
+            "🛡️ Saída Estratégica": "#3b82f6", # Azul
+            "🛑 Resiliência": "#f97316",  # Laranja
+            "💥 Descontrole": "#ef4444",  # Vermelho
+        }
+        
+        with col_dna_grafico:
+            labels = list(dados_grafico.keys())
+            values = list(dados_grafico.values())
+            colors = [cores_map.get(l, "gray") for l in labels]
+            
+            fig_dna = go.Figure(data=[go.Pie(
+                labels=labels, 
+                values=values, 
+                hole=.6,
+                marker=dict(colors=colors, line=dict(color='#0f172a', width=2)),
+                textinfo='percent',
+                hoverinfo='label+value'
+            )])
+            
+            fig_dna.update_layout(
+                showlegend=False,
+                margin=dict(l=0, r=0, t=0, b=0),
+                height=200,
+                paper_bgcolor='rgba(0,0,0,0)',
+                annotations=[dict(text=f"{total_validos}", x=0.5, y=0.5, font_size=20, showarrow=False, font_color="white")]
+            )
+            st.plotly_chart(fig_dna, use_container_width=True)
+            st.markdown(f"<div style='text-align: center; color: gray; font-size: 0.8em; margin-top: -10px;'>Operações Qualificadas</div>", unsafe_allow_html=True)
+
+        with col_dna_barras:
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True) # Espaçamento
+            for item, qtd in dados_grafico.items():
+                pct = (qtd / total_validos) * 100
+                cor = cores_map.get(item, "gray")
+                
+                # HTML DA BARRA DE PROGRESSO CUSTOMIZADA
+                st.markdown(f"""
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span style="color: #e2e8f0; font-size: 0.9em; font-weight: 500;">{item}</span>
+                            <span style="color: {cor}; font-weight: bold; font-size: 0.9em;">{qtd}x</span>
+                        </div>
+                        <div style="width: 100%; background-color: rgba(255,255,255,0.05); height: 8px; border-radius: 4px;">
+                            <div style="width: {pct}%; background-color: {cor}; height: 100%; border-radius: 4px; box-shadow: 0 0 8px {cor}40;"></div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
 st.divider()
