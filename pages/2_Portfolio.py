@@ -96,7 +96,6 @@ def obter_preco_btc():
 
 def carregar_dados_nuvem():
     try:
-        # [MODIFICAÇÃO ÚNICA]: Filtra apenas dados do usuário logado
         user_id = st.session_state.get("user_id")
         resposta = supabase.table("operacoes").select("*").eq("user_id", user_id).execute()
         
@@ -133,7 +132,7 @@ if 'dados_sincronizados' not in st.session_state:
         st.session_state['historico_fechado'] = fechadas
         st.session_state['dados_sincronizados'] = True
 
-# Recarregando via botão oculto para forçar atualização se a página ficar aberta por horas
+# Recarregando via botão oculto
 col_refresh, col_vazia = st.columns([1, 9])
 with col_refresh:
     if st.button("🔄 Atualizar Dados"):
@@ -172,7 +171,7 @@ sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
-# --- CÁLCULOS AVANÇADOS (PAYOFF E STREAK) ---
+# --- CÁLCULOS AVANÇADOS ---
 media_gain = 0.0
 media_loss = 0.0
 streak_count = 0
@@ -202,7 +201,7 @@ if historico_fechado:
         else:
             break
 
-# --- CÁLCULO DE TEMPO MÉDIO DE OPERAÇÃO ---
+# --- TEMPO MÉDIO ---
 tempos_operacao = []
 for o in historico_fechado:
     try:
@@ -219,7 +218,7 @@ if tempos_operacao:
     minutos = int((media_seg % 3600) // 60)
     tempo_medio_str = f"{horas}h {minutos}m" if horas > 0 else f"{minutos}m"
 
-# --- DESENHANDO OS CARDS ---
+# --- DESENHO DOS CARDS SUPERIORES ---
 st.subheader("Visão Geral do Portfólio")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -315,7 +314,6 @@ with col_tabelas:
         else:
             dados_fechadas = []
             for o in historico_fechado:
-                # Capturando o comportamento para o Diário
                 comportamento = o.get('comportamento_final')
                 if not comportamento:
                     comportamento = "---"
@@ -354,7 +352,6 @@ with col_tabelas:
 with col_lateral:
     st.subheader("📊 Raio-X de Performance")
     
-    # 1. BARRA DE FORÇA (WIN/LOSS)
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     st.markdown(f"""
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
@@ -369,7 +366,6 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. A TRINDADE
     col_payoff, col_streak, col_tempo = st.columns(3)
     
     with col_payoff:
@@ -405,7 +401,6 @@ with col_lateral:
             </div>
         """, unsafe_allow_html=True)
 
-    # 3. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY)
     st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
@@ -480,16 +475,16 @@ with col_lateral:
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 # =========================================================
-# NOVA SEÇÃO: DNA OPERACIONAL (SEGUNDO PLANO)
+# SEÇÃO FINAL: DNA OPERACIONAL
 # =========================================================
 
-# SEPARADOR VISUAL (A "LISTRA SIMPLES" QUE VOCÊ PEDIU)
+# SEPARADOR VISUAL DOURADO
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
     <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
 """, unsafe_allow_html=True)
 
-st.subheader("🧬 DNA Operacional (Análise Comportamental)")
+st.subheader("🧬 DNA Operacional")
 
 if not historico_fechado:
     st.info("O perfil comportamental será gerado após o fechamento das primeiras operações com projeção (Alvo/Stop).")
@@ -519,12 +514,12 @@ else:
     else:
         col_dna_grafico, col_dna_barras = st.columns([1, 2], gap="large")
         
-        # CORES OFICIAIS
+        # CORES "TACTICAL" (MAIS SÓBRIAS)
         cores_map = {
-            "🏆 Sniper": "#22c55e",       # Verde Neon
-            "🥬 Mão de Alface": "#eab308",# Amarelo Ouro
-            "🛡️ Saída Estratégica": "#3b82f6", # Azul
-            "🛑 Resiliência": "#f97316",  # Laranja
+            "🏆 Sniper": "#10b981",       # Emerald (Verde profissional)
+            "🥬 Mão de Alface": "#F3BA2F",# Dourado Institucional
+            "🛡️ Saída Estratégica": "#64748b", # Slate (Cinza Azulado)
+            "🛑 Resiliência": "#f97316",  # Laranja Fosco
             "💥 Descontrole": "#ef4444",  # Vermelho
         }
         
@@ -537,8 +532,10 @@ else:
                 labels=labels, 
                 values=values, 
                 hole=.6,
-                marker=dict(colors=colors, line=dict(color='#0f172a', width=2)),
+                marker=dict(colors=colors, line=dict(color='#0f172a', width=3)),
                 textinfo='percent',
+                textposition='outside', # NÚMEROS FORA
+                textfont=dict(size=14, color='white', family="sans-serif"),
                 hoverinfo='label+value'
             )])
             
@@ -558,12 +555,11 @@ else:
                 pct = (qtd / total_validos) * 100
                 cor = cores_map.get(item, "gray")
                 
-                # HTML DA BARRA DE PROGRESSO CUSTOMIZADA
+                # BARRA DE PROGRESSO SEM NÚMERO
                 st.markdown(f"""
                     <div style="margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                             <span style="color: #e2e8f0; font-size: 0.9em; font-weight: 500;">{item}</span>
-                            <span style="color: {cor}; font-weight: bold; font-size: 0.9em;">{qtd}x</span>
                         </div>
                         <div style="width: 100%; background-color: rgba(255,255,255,0.05); height: 8px; border-radius: 4px;">
                             <div style="width: {pct}%; background-color: {cor}; height: 100%; border-radius: 4px; box-shadow: 0 0 8px {cor}40;"></div>
