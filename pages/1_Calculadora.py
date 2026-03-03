@@ -24,13 +24,12 @@ except Exception as e:
     st.stop()
 
 # --- CONFIGURAÇÃO DE ATIVOS (MULTIMOEDAS) ---
-# Ordem definida: O primeiro (BTC) será o padrão
 ASSETS_CONFIG = {
-    "BTC": {"nome": "Bitcoin", "icon": "₿"},
-    "ETH": {"nome": "Ethereum", "icon": "💠"},
-    "SOL": {"nome": "Solana", "icon": "🟣"},
-    "BNB": {"nome": "Binance Coin", "icon": "🟡"},
-    "PAXG": {"nome": "PAX Gold", "icon": "🏆"}
+    "BTC": {"nome": "Bitcoin", "icon": "₿", "cor": "#F3BA2F"},
+    "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
+    "SOL": {"nome": "Solana", "icon": "🟣", "cor": "#14F195"},
+    "BNB": {"nome": "Binance Coin", "icon": "🟡", "cor": "#F3BA2F"},
+    "PAXG": {"nome": "PAX Gold", "icon": "🏆", "cor": "#D4AF37"}
 }
 
 # --- CSS INSTITUCIONAL ---
@@ -132,7 +131,6 @@ def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
 def obter_cotacao(simbolo):
     if not simbolo: return 0.0
     try:
-        # Monta o par (Ex: BTC + USDT = BTCUSDT)
         par = f"{simbolo}USDT"
         url = f"https://api.binance.us/api/v3/ticker/price?symbol={par}"
         resposta = requests.get(url, timeout=3)
@@ -150,7 +148,6 @@ def carregar_dados_nuvem():
         
         for indice, d in enumerate(dados_ordenados):
             d['display_id'] = f"{(indice + 1):03d}"
-            # Garante compatibilidade com ordens antigas
             if 'simbolo' not in d or not d['simbolo']:
                 d['simbolo'] = 'BTC'
             
@@ -193,28 +190,38 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- SELETOR DE ATIVOS (VISUAL AJUSTADO) ---
-            # 'vertical_alignment="bottom"' alinha o texto com a caixa de seleção
-            col_sel_1, col_sel_2 = st.columns([1, 1.5], vertical_alignment="bottom")
+            # --- SELETOR DE ATIVOS E CARD DE PREÇO ---
+            # Ajuste de Alinhamento: Criamos um rótulo "falso" para o card de preço ficar na mesma linha do Selectbox
+            col_sel_1, col_sel_2 = st.columns([1, 1.2])
             
             with col_sel_1:
-                # O usuário escolhe a moeda aqui
                 ativo_selecionado = st.selectbox(
                     "Escolha o Ativo", 
                     options=list(ASSETS_CONFIG.keys()),
-                    index=0, # Garante que BTC (índice 0) seja o padrão
+                    index=0, 
                     format_func=lambda x: f"{ASSETS_CONFIG[x]['icon']} {x}"
                 )
             
-            # Busca cotação dinâmica com base na escolha
             cotacao_atual = obter_cotacao(ativo_selecionado)
             
             with col_sel_2:
-                # Exibe o preço da moeda selecionada (Simples e Dourado)
+                # Simulando a estrutura visual do Selectbox para alinhamento perfeito
                 st.markdown(f"""
-                    <div style="margin-bottom: 5px;">
-                        <span style="color: #9ca3af; font-size: 0.9em; margin-right: 8px;">Cotação Atual ({ativo_selecionado}):</span>
-                        <strong style="font-size: 1.4em; color: #F3BA2F;">${cotacao_atual:,.2f}</strong>
+                    <div style="margin-bottom: 0px;">
+                        <label style="font-size: 14px; color: #fafafa; margin-bottom: 8px; display: block;">Cotação Atual ({ativo_selecionado})</label>
+                        <div style="
+                            background-color: rgba(255, 255, 255, 0.05);
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            border-radius: 0.5rem;
+                            padding: 10px 15px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            height: 42px; /* Altura padrão aproximada de um input do Streamlit */
+                        ">
+                            <strong style="font-size: 1.1em; color: #F3BA2F;">${cotacao_atual:,.2f}</strong>
+                            <span style="color: #9ca3af; font-size: 0.8em;">USDT</span>
+                        </div>
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -224,14 +231,12 @@ with col_boleta:
             with c1:
                 valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
             with c2:
-                # Preço sugerido é a cotação atual da moeda selecionada
                 preco_execucao = st.number_input(f"Preço Pago ({ativo_selecionado})", min_value=0.0, value=cotacao_atual, step=0.01, format="%.2f", key="preco_compra")
                 
             quantidade = 0.0
             if preco_execucao > 0:
                 quantidade = valor_total_usdt / preco_execucao
             
-            # Mostra a quantidade com o nome da moeda correta
             st.markdown(f"""
                 <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
                     <strong>Volume de Compra:</strong> {quantidade:.6f} {ativo_selecionado}
@@ -310,15 +315,12 @@ with col_boleta:
             if not st.session_state['ordens_abertas']:
                 st.info("Nenhuma ordem aberta no banco de dados.")
             else:
-                # Selectbox inteligente: Mostra o ID e o SÍMBOLO da moeda
                 opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | {l.get('simbolo', 'BTC')} | Valor: ${l['valor_investido_usdt']:,.2f}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
-                # Pega a ordem completa e descobre qual moeda é
                 ordem_ativa = next(l for l in st.session_state['ordens_abertas'] if l["id"] == ordem_selecionada)
                 simbolo_ativo = ordem_ativa.get('simbolo', 'BTC')
                 
-                # Busca cotação atualizada da moeda específica da ordem
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 
                 st.markdown(f"""
@@ -328,7 +330,6 @@ with col_boleta:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Input de preço ajustado para a moeda
                 preco_venda = st.number_input(f"Cotação da Venda ({simbolo_ativo})", min_value=0.0, step=0.01, format="%.2f", key="preco_venda_input")
                 
                 usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda_bnb")
@@ -350,7 +351,6 @@ with col_boleta:
                     sinal_prev = "+" if prev_lucro_usdt >= 0 else "-"
                     cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
                     
-                    # PROJEÇÃO DO VEREDITO (GATILHO PSICOLÓGICO)
                     comportamento_prev = None
                     if ordem_ativa.get('teve_projecao'):
                         comportamento_prev = avaliar_comportamento(
@@ -389,7 +389,6 @@ with col_boleta:
                     lucro_pct = (lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
                     agora_venda = datetime.datetime.now(fuso_brasilia)
                     
-                    # CARIMBO FINAL USANDO A FUNÇÃO MASTER
                     comportamento_final = None
                     if ordem_ativa.get('teve_projecao'):
                         comportamento_final = avaliar_comportamento(
@@ -413,9 +412,7 @@ with col_boleta:
                     }
                     
                     try:
-                        # Update seguro usando o ID específico
                         supabase.table("operacoes").update(dados_atualizacao).eq("id", ordem_ativa['id']).execute()
-                        
                         ordem_ativa.update(dados_atualizacao)
                         st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
                         st.session_state['historico_fechado'].append(ordem_ativa)
@@ -485,9 +482,7 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
-            # Obtém o símbolo da moeda (se não existir, assume BTC)
             simbolo_display = t.get('simbolo', 'BTC')
-            
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
