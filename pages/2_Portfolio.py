@@ -676,61 +676,82 @@ else:
             </div>
         """, unsafe_allow_html=True)
 
-    # GRÁFICO COMPARATIVO DE LINHAS
+   # GRÁFICO COMPARATIVO DE LINHAS (EIXOS INDEPENDENTES / CORRIDA DE EFICIÊNCIA)
     st.markdown("<br>", unsafe_allow_html=True)
     
-    df_comp = pd.DataFrame(historico_fechado)
-    if not df_comp.empty:
-        df_comp['Datahora'] = pd.to_datetime(df_comp['data_fechamento'] + ' ' + df_comp['hora_fechamento'])
-        df_comp = df_comp.sort_values('Datahora')
+    # 1. Separar os dados em duas listas independentes
+    lista_planejados = [o['lucro_usdt'] for o in historico_fechado if o.get('teve_projecao')]
+    lista_livres = [o['lucro_usdt'] for o in historico_fechado if not o.get('teve_projecao')]
+    
+    # 2. Calcular o Acumulado (Soma Progressiva) para cada lista separadamente
+    # Se a lista estiver vazia, o gráfico apenas não desenha a linha, sem quebrar.
+    df_est = pd.DataFrame({'lucro': lista_planejados})
+    df_liv = pd.DataFrame({'lucro': lista_livres})
+    
+    fig_comp = go.Figure()
+    
+    # LINHA AZUL (PLANEJADO) - Só desenha se tiver dados
+    if not df_est.empty:
+        df_est['acumulado'] = df_est['lucro'].cumsum()
+        df_est['trade_num'] = range(1, len(df_est) + 1) # Eixo X independente (1, 2, 3...)
         
-        x_axis = []
-        y_est = []
-        y_liv = []
-        
-        acum_est = 0.0
-        acum_liv = 0.0
-        
-        count = 1
-        for _, row in df_comp.iterrows():
-            lucro = float(row['lucro_usdt'])
-            if row.get('teve_projecao'):
-                acum_est += lucro
-            else:
-                acum_liv += lucro
-            
-            x_axis.append(count)
-            y_est.append(acum_est)
-            y_liv.append(acum_liv)
-            count += 1
-            
-        fig_comp = go.Figure()
-        
-        # Linha Planejada
         fig_comp.add_trace(go.Scatter(
-            x=x_axis, y=y_est, mode='lines', name='Com Planejamento',
-            line=dict(color=cor_azul, width=2),
-            hovertemplate="Planejado: $%{y:.2f}<extra></extra>"
+            x=df_est['trade_num'], 
+            y=df_est['acumulado'], 
+            mode='lines+markers', 
+            name='Com Planejamento',
+            line=dict(color=cor_azul, width=3),
+            marker=dict(size=6),
+            hovertemplate="Trade #%{x}<br>Acumulado: $%{y:.2f}<extra></extra>"
+        ))
+
+    # LINHA AMARELA (LIVRE) - Só desenha se tiver dados
+    if not df_liv.empty:
+        df_liv['acumulado'] = df_liv['lucro'].cumsum()
+        df_liv['trade_num'] = range(1, len(df_liv) + 1) # Eixo X independente (1, 2, 3...)
+        
+        fig_comp.add_trace(go.Scatter(
+            x=df_liv['trade_num'], 
+            y=df_liv['acumulado'], 
+            mode='lines+markers', 
+            name='Sem Planejamento',
+            line=dict(color=cor_amarela, width=3, dash='dot'), 
+            marker=dict(size=6),
+            hovertemplate="Trade #%{x}<br>Acumulado: $%{y:.2f}<extra></extra>"
         ))
         
-        # Linha Livre
-        fig_comp.add_trace(go.Scatter(
-            x=x_axis, y=y_liv, mode='lines', name='Sem Planejamento',
-            line=dict(color=cor_amarela, width=2, dash='dot'), 
-            hovertemplate="Livre: $%{y:.2f}<extra></extra>"
-        ))
+    # Ajuste para garantir que o gráfico mostre algo mesmo vazio
+    eixo_x_max = max(len(lista_planejados), len(lista_livres)) if (lista_planejados or lista_livres) else 10
         
-        fig_comp.update_layout(
-            height=280,
-            margin=dict(l=0, r=0, t=10, b=0),
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="white", size=10)),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, title="Linha do Tempo (Trades Fechados)"),
-            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=True, zerolinecolor='rgba(255,255,255,0.1)', tickfont=dict(color="gray")),
-            hovermode="x unified"
-        )
-        
+    fig_comp.update_layout(
+        height=350, # Um pouco mais alto para ver os detalhes
+        margin=dict(l=0, r=0, t=30, b=0),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="white", size=10)),
+        xaxis=dict(
+            showgrid=False, 
+            zeroline=False, 
+            title=dict(text="Quantidade de Trades Executados (Corrida)", font=dict(size=12, color="#9ca3af")),
+            tickmode='linear',
+            dtick=1, # Mostra de 1 em 1 trade se for pouco, ou ajusta automatico
+            color="#9ca3af",
+            range=[0.5, eixo_x_max + 0.5] # Margem lateral para não colar no canto
+        ),
+        yaxis=dict(
+            showgrid=True, 
+            gridcolor='rgba(255,255,255,0.05)', 
+            zeroline=True, 
+            zerolinecolor='rgba(255,255,255,0.1)', 
+            tickfont=dict(color="gray"),
+            tickprefix="$"
+        ),
+        hovermode="x unified" # Mostra os dois cards juntos se eles se cruzarem no mesmo numero de trade
+    )
+    
+    if lista_planejados or lista_livres:
         st.plotly_chart(fig_comp, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info("Realize operações de ambos os tipos para visualizar a comparação gráfica.")
 
 st.divider()
