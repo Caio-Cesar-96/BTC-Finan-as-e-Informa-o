@@ -811,61 +811,70 @@ else:
 # =========================================================
 
 # CSS ESPECÍFICO PARA OS CARDS "WIDE" (LISTA LATERAL)
+# Ajustado para evitar que o Streamlit entenda como código
 st.markdown("""
-    <style>
-    .asset-row {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-top: 3px solid #F3BA2F; /* Padrão Dourado para todos */
-        border-radius: 8px;
-        padding: 20px 30px;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .asset-row:hover {
-        transform: translateX(5px); /* Efeito sutil de movimento lateral */
-        box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.3);
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.9));
-    }
-    .asset-identity {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        min-width: 150px;
-    }
-    .asset-icon-large {
-        font-size: 2em;
-    }
-    .asset-name-large {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: white;
-        letter-spacing: 1px;
-    }
-    .asset-stat-box {
-        text-align: center;
-        min-width: 120px;
-    }
-    .asset-label {
-        font-size: 0.75em;
-        color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-    .asset-value {
-        font-size: 1.1em;
-        font-weight: bold;
-    }
-    .vertical-divider {
-        width: 1px;
-        height: 30px;
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-    </style>
+<style>
+.asset-row {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 3px solid #F3BA2F; /* Borda Dourada Padrão */
+    border-radius: 8px;
+    padding: 20px 30px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.asset-row:hover {
+    transform: translateX(5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+}
+.asset-identity {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 25%; /* Largura fixa para alinhar */
+}
+.asset-icon-large {
+    font-size: 2.2em;
+}
+.asset-name-large {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: white;
+    letter-spacing: 1px;
+}
+.asset-stats-container {
+    display: flex;
+    justify-content: space-around;
+    flex-grow: 1;
+    align-items: center;
+}
+.asset-stat-box {
+    text-align: center;
+    min-width: 100px;
+}
+.asset-label {
+    font-size: 0.75em;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-family: sans-serif;
+}
+.asset-value {
+    font-size: 1.3em;
+    font-weight: bold;
+    font-family: sans-serif;
+}
+.vertical-divider {
+    width: 1px;
+    height: 35px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+</style>
 """, unsafe_allow_html=True)
 
 st.markdown("<br><br>", unsafe_allow_html=True)
@@ -897,47 +906,50 @@ else:
         stats = dados_por_ativo[simb]
         win_rate_asset = (stats['wins'] / stats['total']) * 100 if stats['total'] > 0 else 0.0
         
-        # Cores condicionais para valores
+        # Cores condicionais apenas para os números (Texto)
         cor_lucro = "#22c55e" if stats['lucro'] >= 0 else "#ef4444"
-        cor_wr = "#22c55e" if win_rate_asset >= 50 else "#ef4444"
+        sinal_lucro = "+" if stats['lucro'] >= 0 else ""
+        cor_wr = "#22c55e" if win_rate_asset >= 50 else "#e2e8f0"
         
         # Ícone
         icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
         
-        st.markdown(f"""
-            <div class="asset-row">
-                <div class="asset-identity">
-                    <div class="asset-icon-large">{icone}</div>
-                    <div class="asset-name-large">{simb}</div>
-                </div>
-                
-                <div class="vertical-divider"></div>
-                
-                <div class="asset-stat-box">
-                    <div class="asset-label">Resultado Líquido</div>
-                    <div class="asset-value" style="color: {cor_lucro}; font-size: 1.3em;">
-                        ${stats['lucro']:,.2f}
-                    </div>
-                </div>
-                
-                <div class="vertical-divider"></div>
-                
-                <div class="asset-stat-box">
-                    <div class="asset-label">Win Rate</div>
-                    <div class="asset-value" style="color: {cor_wr};">
-                        {win_rate_asset:.0f}%
-                    </div>
-                </div>
-                
-                <div class="vertical-divider"></div>
-                
-                <div class="asset-stat-box">
-                    <div class="asset-label">Total Trades</div>
-                    <div class="asset-value" style="color: white;">
-                        {stats['total']}
-                    </div>
-                </div>
+        # HTML construído sem indentação excessiva para evitar bug do markdown
+        html_card = f"""
+<div class="asset-row">
+    <div class="asset-identity">
+        <div class="asset-icon-large">{icone}</div>
+        <div class="asset-name-large">{simb}</div>
+    </div>
+    
+    <div class="asset-stats-container">
+        <div class="asset-stat-box">
+            <div class="asset-label">Resultado Líquido</div>
+            <div class="asset-value" style="color: {cor_lucro};">
+                {sinal_lucro}${stats['lucro']:,.2f}
             </div>
-        """, unsafe_allow_html=True)
+        </div>
+        
+        <div class="vertical-divider"></div>
+        
+        <div class="asset-stat-box">
+            <div class="asset-label">Win Rate</div>
+            <div class="asset-value" style="color: {cor_wr};">
+                {win_rate_asset:.0f}%
+            </div>
+        </div>
+        
+        <div class="vertical-divider"></div>
+        
+        <div class="asset-stat-box">
+            <div class="asset-label">Total Trades</div>
+            <div class="asset-value" style="color: white;">
+                {stats['total']}
+            </div>
+        </div>
+    </div>
+</div>
+"""
+        st.markdown(html_card, unsafe_allow_html=True)
 
 st.divider()
