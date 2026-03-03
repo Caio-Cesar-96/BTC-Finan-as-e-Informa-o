@@ -190,9 +190,9 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- SELETOR DE ATIVOS E CARD DE PREÇO ---
-            # Ajuste de Alinhamento: Criamos um rótulo "falso" para o card de preço ficar na mesma linha do Selectbox
-            col_sel_1, col_sel_2 = st.columns([1, 1.2])
+            # --- ROW 1: SELETOR DE ATIVOS E CARD DE PREÇO ---
+            # Usando st.columns(2) para garantir simetria exata com a linha de baixo
+            col_sel_1, col_sel_2 = st.columns(2)
             
             with col_sel_1:
                 ativo_selecionado = st.selectbox(
@@ -205,28 +205,30 @@ with col_boleta:
             cotacao_atual = obter_cotacao(ativo_selecionado)
             
             with col_sel_2:
-                # Simulando a estrutura visual do Selectbox para alinhamento perfeito
+                # Card Customizado que imita exatamente um Input do Streamlit (Dark Mode)
                 st.markdown(f"""
-                    <div style="margin-bottom: 0px;">
-                        <label style="font-size: 14px; color: #fafafa; margin-bottom: 8px; display: block;">Cotação Atual ({ativo_selecionado})</label>
+                    <div style="margin-top: 0px;">
+                        <label style="font-size: 14px; color: #fafafa; margin-bottom: 8px; display: block; font-family: 'Source Sans Pro', sans-serif;">Cotação Atual ({ativo_selecionado})</label>
                         <div style="
-                            background-color: rgba(255, 255, 255, 0.05);
-                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            background-color: #0e1117; /* Cor padrão do input no dark mode */
+                            border: 1px solid rgba(250, 250, 250, 0.2); /* Borda padrão */
                             border-radius: 0.5rem;
-                            padding: 10px 15px;
+                            padding: 0 12px;
                             display: flex;
                             align-items: center;
                             justify-content: space-between;
-                            height: 42px; /* Altura padrão aproximada de um input do Streamlit */
+                            height: 48px; /* Altura exata para casar com o selectbox */
+                            box-sizing: border-box;
                         ">
-                            <strong style="font-size: 1.1em; color: #F3BA2F;">${cotacao_atual:,.2f}</strong>
-                            <span style="color: #9ca3af; font-size: 0.8em;">USDT</span>
+                            <strong style="font-size: 1.1em; color: #F3BA2F; font-family: monospace;">${cotacao_atual:,.2f}</strong>
+                            <span style="color: #555; font-size: 0.8em; font-weight: bold;">USDT</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
+            # --- ROW 2: INPUTS DE VALOR ---
             c1, c2 = st.columns(2)
             with c1:
                 valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
@@ -323,6 +325,7 @@ with col_boleta:
                 
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 
+                # Card de cotação atual na aba de venda também alinhado
                 st.markdown(f"""
                     <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                         <span style="color: #9ca3af; font-size: 0.95em;">Mercado Atual ({simbolo_ativo})</span>
