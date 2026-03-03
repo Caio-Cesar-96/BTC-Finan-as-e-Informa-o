@@ -928,26 +928,31 @@ else:
                 total_investido_geral += d['investido_aberto']
         
         if total_investido_geral > 0:
-            # Estilo IDÊNTICO ao DNA Operacional (Texto fora, maior, negrito)
             fig_aloc = go.Figure(data=[go.Pie(
                 labels=labels_aloc, 
                 values=values_aloc, 
-                hole=.6,
+                hole=.6, # Buraco um pouco menor para caber texto
                 marker=dict(colors=colors_aloc, line=dict(color='#0e1117', width=3)),
                 textinfo='label+percent',
-                textposition='outside', # Joga o texto para fora
-                textfont=dict(size=14, color='white', family="sans-serif", weight="bold"), # Fonte maior e negrito
+                textposition='outside',
+                textfont=dict(size=14, color='white', family="sans-serif", weight="bold"),
                 showlegend=False
             )])
             
+            # AQUI ESTÁ O TRUQUE: Annotations no centro do gráfico
             fig_aloc.update_layout(
-                margin=dict(l=20, r=20, t=20, b=20), # Margem maior para não cortar o texto
-                height=280, # Altura maior para dar destaque
+                margin=dict(l=20, r=20, t=20, b=20),
+                height=280,
                 paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)'
+                plot_bgcolor='rgba(0,0,0,0)',
+                annotations=[dict(
+                    text=f"<span style='font-size:0.8em; color:gray'>Total em Risco</span><br><span style='font-size:1.4em; color:white; font-weight:bold'>${total_investido_geral:,.0f}</span>",
+                    x=0.5, y=0.5,
+                    font_size=12,
+                    showarrow=False
+                )]
             )
             st.plotly_chart(fig_aloc, use_container_width=True)
-            st.markdown(f"<div style='text-align: center; font-size: 0.9em; color: gray; margin-top: -20px;'>Total em Risco: <b>${total_investido_geral:,.0f}</b></div>", unsafe_allow_html=True)
         else:
             st.info("Carteira 100% Líquida.")
 
@@ -958,7 +963,7 @@ else:
         maior_risco = max(dados_ativos.items(), key=lambda x: x[1]['investido_aberto'], default=(None, None))
         
         st.markdown("##### 🏆 Destaques do Portfólio")
-        st.markdown("<br>", unsafe_allow_html=True) # Espaço para alinhar com o centro do gráfico
+        st.markdown("<br>", unsafe_allow_html=True)
         
         c_dest1, c_dest2, c_dest3 = st.columns(3)
         
@@ -1054,7 +1059,7 @@ ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
 <div class="asset-stats-container">
 {html_pm}
 <div class="asset-stat-box">
-<div class="asset-label">Resultado Líquido</div>
+<div class="asset-label">Lucro Realizado</div>
 <div class="asset-value" style="color: {cor_lucro};">
 {sinal_lucro}${stats['lucro_realizado']:,.2f}
 </div>
