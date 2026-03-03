@@ -96,7 +96,6 @@ def obter_preco_btc():
 
 def carregar_dados_nuvem():
     try:
-        # [MODIFICAÇÃO ÚNICA]: Filtra apenas dados do usuário logado
         user_id = st.session_state.get("user_id")
         resposta = supabase.table("operacoes").select("*").eq("user_id", user_id).execute()
         
@@ -133,7 +132,7 @@ if 'dados_sincronizados' not in st.session_state:
         st.session_state['historico_fechado'] = fechadas
         st.session_state['dados_sincronizados'] = True
 
-# Recarregando via botão oculto para forçar atualização se a página ficar aberta por horas
+# Recarregando via botão oculto
 col_refresh, col_vazia = st.columns([1, 9])
 with col_refresh:
     if st.button("🔄 Atualizar Dados"):
@@ -172,7 +171,7 @@ sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
-# --- CÁLCULOS AVANÇADOS (PAYOFF E STREAK) ---
+# --- CÁLCULOS AVANÇADOS ---
 media_gain = 0.0
 media_loss = 0.0
 streak_count = 0
@@ -202,7 +201,7 @@ if historico_fechado:
         else:
             break
 
-# --- CÁLCULO DE TEMPO MÉDIO DE OPERAÇÃO ---
+# --- TEMPO MÉDIO ---
 tempos_operacao = []
 for o in historico_fechado:
     try:
@@ -219,7 +218,7 @@ if tempos_operacao:
     minutos = int((media_seg % 3600) // 60)
     tempo_medio_str = f"{horas}h {minutos}m" if horas > 0 else f"{minutos}m"
 
-# --- DESENHANDO OS CARDS ---
+# --- DESENHO DOS CARDS SUPERIORES ---
 st.subheader("Visão Geral do Portfólio")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -315,7 +314,6 @@ with col_tabelas:
         else:
             dados_fechadas = []
             for o in historico_fechado:
-                # Capturando o comportamento para o Diário
                 comportamento = o.get('comportamento_final')
                 if not comportamento:
                     comportamento = "---"
@@ -354,7 +352,6 @@ with col_tabelas:
 with col_lateral:
     st.subheader("📊 Raio-X de Performance")
     
-    # 1. BARRA DE FORÇA (WIN/LOSS)
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     st.markdown(f"""
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
@@ -369,7 +366,6 @@ with col_lateral:
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. A TRINDADE
     col_payoff, col_streak, col_tempo = st.columns(3)
     
     with col_payoff:
@@ -405,7 +401,6 @@ with col_lateral:
             </div>
         """, unsafe_allow_html=True)
 
-    # 3. GRÁFICO DE LINHA PROFISSIONAL (PLOTLY)
     st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
@@ -494,7 +489,6 @@ st.markdown("""
         padding: 15px 10px; /* Padding reduzido para ficar mais compacto */
         text-align: center;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
-        cursor: help; /* Cursor de interrogação/ajuda ao passar o mouse */
     }
     .mini-metric:hover {
         transform: translateY(-2px);
@@ -506,10 +500,27 @@ st.markdown("""
         color: #9ca3af;
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 8px;
         font-weight: 500;
+        display: inline-block;
     }
-    /* Removedor de letras miúdas (mini-sub) pois você pediu para tirar */
+    /* Estilo para a Interrogação (Tooltip) */
+    .help-icon {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        background-color: rgba(255,255,255,0.1);
+        color: #9ca3af;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 16px;
+        font-size: 11px;
+        margin-left: 6px;
+        cursor: help;
+    }
+    .help-icon:hover {
+        background-color: #3b82f6;
+        color: white;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -597,12 +608,12 @@ else:
     else:
         st.info("Aguardando dados de operações com alvo e stop para gerar o DNA.")
 
-    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (CARDS REFEITOS) ---
+    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (CARDS REFEITOS COM PREENCHIMENTO) ---
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
     st.markdown("#### ⚖️ Comparação Comportamental")
-    st.caption("Performance: Operações Planejadas (Alvo/Stop definidos) vs. Operações Livres (Feeling).")
+    # Subtítulo (caption) removido conforme pedido
     
     # CÁLCULOS COMPARATIVOS
     ops_estruturadas = [o for o in historico_fechado if o.get('teve_projecao')]
@@ -626,41 +637,68 @@ else:
     cor_azul = "#3b82f6"
     cor_amarela = "#F3BA2F"
     
-    # CARDS COMPARATIVOS (ATUALIZADOS)
+    # CARDS COMPARATIVOS (PREENCHIDOS + TOOLTIP ELEGANTE + LABELS CLAROS)
     col_c1, col_c2, col_c3 = st.columns(3)
     
     with col_c1:
         st.markdown(f"""
-            <div class="mini-metric" title="Soma total do lucro/prejuízo de todas as operações fechadas em cada categoria.">
-                <div class="mini-label">Lucro Líquido</div>
-                <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
-                    <span style="color: {cor_azul}; font-weight: bold; font-size: 1.2em;">${lucro_est:.2f}</span>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 20px;"></div>
-                    <span style="color: {cor_amarela}; font-weight: bold; font-size: 1.2em;">${lucro_liv:.2f}</span>
+            <div class="mini-metric">
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+                    <span class="mini-label">LUCRO LÍQUIDO</span>
+                    <span class="help-icon" title="Soma total do resultado financeiro de todas as operações encerradas em cada categoria.">?</span>
+                </div>
+                <div style="display: flex; justify-content: space-around; align-items: center;">
+                    <div style="text-align: center;">
+                        <div style="color: {cor_azul}; font-size: 1.4em; font-weight: bold;">${lucro_est:.2f}</div>
+                        <div style="font-size: 0.7em; color: {cor_azul}; opacity: 0.8; font-weight: bold; margin-top: 2px;">SNIPER</div>
+                    </div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 35px;"></div>
+                    <div style="text-align: center;">
+                        <div style="color: {cor_amarela}; font-size: 1.4em; font-weight: bold;">${lucro_liv:.2f}</div>
+                        <div style="font-size: 0.7em; color: {cor_amarela}; opacity: 0.8; font-weight: bold; margin-top: 2px;">LIVRE</div>
+                    </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
     with col_c2:
         st.markdown(f"""
-            <div class="mini-metric" title="Porcentagem de operações que terminaram positivas (Lucro > 0).">
-                <div class="mini-label">Win Rate</div>
-                <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
-                    <span style="color: {cor_azul}; font-weight: bold; font-size: 1.2em;">{wr_est:.0f}%</span>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 20px;"></div>
-                    <span style="color: {cor_amarela}; font-weight: bold; font-size: 1.2em;">{wr_liv:.0f}%</span>
+            <div class="mini-metric">
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+                    <span class="mini-label">WIN RATE</span>
+                    <span class="help-icon" title="Porcentagem de trades que fecharam no positivo (lucro > 0).">?</span>
+                </div>
+                <div style="display: flex; justify-content: space-around; align-items: center;">
+                    <div style="text-align: center;">
+                        <div style="color: {cor_azul}; font-size: 1.4em; font-weight: bold;">{wr_est:.0f}%</div>
+                        <div style="font-size: 0.7em; color: {cor_azul}; opacity: 0.8; font-weight: bold; margin-top: 2px;">SNIPER</div>
+                    </div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 35px;"></div>
+                    <div style="text-align: center;">
+                        <div style="color: {cor_amarela}; font-size: 1.4em; font-weight: bold;">{wr_liv:.0f}%</div>
+                        <div style="font-size: 0.7em; color: {cor_amarela}; opacity: 0.8; font-weight: bold; margin-top: 2px;">LIVRE</div>
+                    </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
     with col_c3:
         st.markdown(f"""
-            <div class="mini-metric" title="Média aritimética de lucro ou prejuízo por operação realizada.">
-                <div class="mini-label">Payoff Médio</div>
-                <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
-                    <span style="color: {cor_azul}; font-weight: bold; font-size: 1.2em;">${media_est:.2f}</span>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 20px;"></div>
-                    <span style="color: {cor_amarela}; font-weight: bold; font-size: 1.2em;">${media_liv:.2f}</span>
+            <div class="mini-metric">
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+                    <span class="mini-label">PAYOFF MÉDIO</span>
+                    <span class="help-icon" title="Média simples de lucro (ou prejuízo) por operação realizada.">?</span>
+                </div>
+                <div style="display: flex; justify-content: space-around; align-items: center;">
+                    <div style="text-align: center;">
+                        <div style="color: {cor_azul}; font-size: 1.4em; font-weight: bold;">${media_est:.2f}</div>
+                        <div style="font-size: 0.7em; color: {cor_azul}; opacity: 0.8; font-weight: bold; margin-top: 2px;">SNIPER</div>
+                    </div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 35px;"></div>
+                    <div style="text-align: center;">
+                        <div style="color: {cor_amarela}; font-size: 1.4em; font-weight: bold;">${media_liv:.2f}</div>
+                        <div style="font-size: 0.7em; color: {cor_amarela}; opacity: 0.8; font-weight: bold; margin-top: 2px;">LIVRE</div>
+                    </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -698,15 +736,15 @@ else:
         
         # Linha Planejada (Azul)
         fig_comp.add_trace(go.Scatter(
-            x=x_axis, y=y_est, mode='lines', name='Com Planejamento',
+            x=x_axis, y=y_est, mode='lines', name='Estratégia Sniper',
             line=dict(color=cor_azul, width=2),
-            hovertemplate="Planejado: $%{y:.2f}<extra></extra>"
+            hovertemplate="Sniper: $%{y:.2f}<extra></extra>"
         ))
         
         # Linha Livre (Amarela)
         fig_comp.add_trace(go.Scatter(
-            x=x_axis, y=y_liv, mode='lines', name='Sem Planejamento',
-            line=dict(color=cor_amarela, width=2, dash='dot'), # Tracejado para diferenciar
+            x=x_axis, y=y_liv, mode='lines', name='Trading Livre',
+            line=dict(color=cor_amarela, width=2, dash='dot'), 
             hovertemplate="Livre: $%{y:.2f}<extra></extra>"
         ))
         
