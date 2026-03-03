@@ -809,12 +809,71 @@ else:
 # =========================================================
 # SEÇÃO NOVA: COFRE DOS ATIVOS (DESEMPENHO INDIVIDUAL)
 # =========================================================
+
+# CSS ESPECÍFICO PARA OS CARDS "WIDE" (LISTA LATERAL)
+st.markdown("""
+    <style>
+    .asset-row {
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-top: 3px solid #F3BA2F; /* Padrão Dourado para todos */
+        border-radius: 8px;
+        padding: 20px 30px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .asset-row:hover {
+        transform: translateX(5px); /* Efeito sutil de movimento lateral */
+        box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.9));
+    }
+    .asset-identity {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        min-width: 150px;
+    }
+    .asset-icon-large {
+        font-size: 2em;
+    }
+    .asset-name-large {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: white;
+        letter-spacing: 1px;
+    }
+    .asset-stat-box {
+        text-align: center;
+        min-width: 120px;
+    }
+    .asset-label {
+        font-size: 0.75em;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    .asset-value {
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+    .vertical-divider {
+        width: 1px;
+        height: 30px;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
     <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
 """, unsafe_allow_html=True)
 
-st.subheader("🏦 Cofre dos Ativos", help="Desempenho detalhado separado por moeda.")
+st.subheader("🏦 Cofre dos Ativos", help="Desempenho consolidado separado por moeda.")
 
 if not historico_fechado:
     st.info("O cofre será aberto assim que você fechar sua primeira operação.")
@@ -831,41 +890,54 @@ else:
         if float(o.get('lucro_usdt', 0)) > 0:
             dados_por_ativo[simb]['wins'] += 1
             
-    # 2. Criar colunas dinâmicas (máximo 3 por linha para não espremer)
     ativos_listados = list(dados_por_ativo.keys())
-    colunas = st.columns(len(ativos_listados)) if len(ativos_listados) <= 4 else st.columns(4)
     
-    for i, simb in enumerate(ativos_listados):
+    # 2. Renderizar Lista Vertical (Cards Wide)
+    for simb in ativos_listados:
         stats = dados_por_ativo[simb]
         win_rate_asset = (stats['wins'] / stats['total']) * 100 if stats['total'] > 0 else 0.0
-        cor_asset_lucro = "#16a34a" if stats['lucro'] >= 0 else "#ef4444"
         
-        # Pega a cor oficial da moeda ou usa cinza se não tiver
-        cor_borda = ASSETS_CONFIG.get(simb, {}).get("cor", "gray")
+        # Cores condicionais para valores
+        cor_lucro = "#22c55e" if stats['lucro'] >= 0 else "#ef4444"
+        cor_wr = "#22c55e" if win_rate_asset >= 50 else "#ef4444"
+        
+        # Ícone
         icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
         
-        # Distribui os cards nas colunas disponíveis (loop circular se tiver muitos)
-        col_atual = colunas[i % len(colunas)]
-        
-        with col_atual:
-            st.markdown(f"""
-                <div class="asset-card" style="border-top: 3px solid {cor_borda};">
-                    <div style="font-size: 1.5em; margin-bottom: 5px;">{icone} {simb}</div>
-                    <div style="font-size: 1.8em; font-weight: bold; color: {cor_asset_lucro}; margin-bottom: 5px;">
+        st.markdown(f"""
+            <div class="asset-row">
+                <div class="asset-identity">
+                    <div class="asset-icon-large">{icone}</div>
+                    <div class="asset-name-large">{simb}</div>
+                </div>
+                
+                <div class="vertical-divider"></div>
+                
+                <div class="asset-stat-box">
+                    <div class="asset-label">Resultado Líquido</div>
+                    <div class="asset-value" style="color: {cor_lucro}; font-size: 1.3em;">
                         ${stats['lucro']:,.2f}
                     </div>
-                    <div style="display: flex; justify-content: space-around; font-size: 0.85em; color: gray; margin-top: 10px;">
-                        <div>
-                            <div style="color: #e2e8f0; font-weight: bold;">{win_rate_asset:.0f}%</div>
-                            <div>Win Rate</div>
-                        </div>
-                        <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
-                        <div>
-                            <div style="color: #e2e8f0; font-weight: bold;">{stats['total']}</div>
-                            <div>Trades</div>
-                        </div>
+                </div>
+                
+                <div class="vertical-divider"></div>
+                
+                <div class="asset-stat-box">
+                    <div class="asset-label">Win Rate</div>
+                    <div class="asset-value" style="color: {cor_wr};">
+                        {win_rate_asset:.0f}%
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
+                
+                <div class="vertical-divider"></div>
+                
+                <div class="asset-stat-box">
+                    <div class="asset-label">Total Trades</div>
+                    <div class="asset-value" style="color: white;">
+                        {stats['total']}
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
 st.divider()
