@@ -92,34 +92,100 @@ st.markdown("""
         .text-gray { color: #6b7280; }
         .text-gold { color: #F3BA2F; }
         
-        /* CSS PARA OS CARDS DE ATIVOS INDIVIDUAIS */
-        .asset-card {
-            background-color: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.3s ease;
+        /* CSS PARA OS CARDS WIDE DO COFRE */
+        .asset-row {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8)) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            border-top: 3px solid #F3BA2F !important;
+            border-radius: 8px !important;
+            padding: 15px 25px !important;
+            margin-bottom: 15px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease !important;
         }
-        .asset-card:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            transform: scale(1.02);
+        .asset-row:hover {
+            transform: translateX(5px) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)) !important;
+        }
+        .asset-identity {
+            display: flex !important;
+            align-items: center !important;
+            gap: 15px !important;
+            width: 20% !important;
+        }
+        .asset-icon-large {
+            font-size: 2em !important;
+        }
+        .asset-name-large {
+            font-size: 1.2em !important;
+            font-weight: bold !important;
+            color: white !important;
+            letter-spacing: 1px !important;
+        }
+        .asset-stats-container {
+            display: flex !important;
+            justify-content: space-between !important;
+            flex-grow: 1 !important;
+            align-items: center !important;
+            margin-left: 20px !important;
+        }
+        .asset-stat-box {
+            text-align: center !important;
+            min-width: 80px !important;
+        }
+        .asset-label {
+            font-size: 0.7em !important;
+            color: #9ca3af !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            margin-bottom: 4px !important;
+            font-family: sans-serif !important;
+        }
+        .asset-value {
+            font-size: 1.1em !important;
+            font-weight: bold !important;
+            font-family: sans-serif !important;
+        }
+        .vertical-divider {
+            width: 1px !important;
+            height: 30px !important;
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .mini-metric {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px 5px;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .mini-metric:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+        }
+        .mini-label {
+            font-size: 0.8em;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: block;
         }
     </style>
 """, unsafe_allow_html=True)
 
 # --- FUNÇÕES DE API INTELIGENTE (MULTI-MOEDA) ---
 def obter_dicionario_precos(lista_simbolos):
-    """
-    Recebe uma lista de simbolos ['BTC', 'ETH'] e retorna um dict {'BTC': 65000, 'ETH': 3500}
-    """
     precos = {}
     if not lista_simbolos:
         return precos
-        
-    # Remove duplicatas e garante padrão
     lista_limpa = list(set([s for s in lista_simbolos if s]))
-    
     for simb in lista_limpa:
         try:
             par = f"{simb}USDT"
@@ -143,7 +209,6 @@ def carregar_dados_nuvem():
         
         for indice, d in enumerate(dados_ordenados):
             d['display_id'] = f"{(indice + 1):03d}"
-            # Garante compatibilidade com ordens antigas sem símbolo
             if 'simbolo' not in d or not d['simbolo']:
                 d['simbolo'] = 'BTC'
             
@@ -186,20 +251,17 @@ with col_refresh:
 ordens_abertas = st.session_state.get('ordens_abertas', [])
 historico_fechado = st.session_state.get('historico_fechado', [])
 
-# --- CÁLCULOS DO MOTOR PYTHON (AGORA MULTI-MOEDA) ---
-
-# 1. Descobrir quais moedas temos em aberto para buscar preços
+# --- CÁLCULOS DO MOTOR PYTHON (MULTI-MOEDA) ---
 simbolos_em_aberto = list(set([o['simbolo'] for o in ordens_abertas]))
 cotacoes_atuais = obter_dicionario_precos(simbolos_em_aberto)
 
 total_investido_aberto = sum(float(o['valor_investido_usdt']) for o in ordens_abertas)
 
-# 2. Calcular valor de mercado somando cada moeda individualmente
 valor_mercado_atual_total = 0.0
 for o in ordens_abertas:
     simb = o.get('simbolo', 'BTC')
     preco_atual = cotacoes_atuais.get(simb, 0.0)
-    qtd = float(o['quantidade_btc']) # Coluna chama quantidade_btc mas guarda a qtd do ativo
+    qtd = float(o['quantidade_btc']) 
     valor_mercado_atual_total += qtd * preco_atual
 
 pnl_flutuante = valor_mercado_atual_total - total_investido_aberto
@@ -223,7 +285,7 @@ sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
-# --- CÁLCULOS AVANÇADOS (PAYOFF, STREAK) ---
+# --- CÁLCULOS AVANÇADOS (RETORNO MÉDIO, STREAK) ---
 media_gain = 0.0
 media_loss = 0.0
 streak_count = 0
@@ -303,9 +365,10 @@ with col3:
     """, unsafe_allow_html=True)
 
 with col4:
+    # AQUI: MUDANÇA DE "WIN RATE" PARA "TAXA DE ACERTO"
     st.markdown(f"""
         <div class="metric-card card-winrate">
-            <div class="metric-title">Win Rate (Taxa de Acerto)</div>
+            <div class="metric-title">Taxa de Acerto</div>
             <div class="metric-value {cor_winrate}">{win_rate:.1f}%</div>
             <div class="metric-sub text-gray">Ordens Positivas: {ordens_vencedoras}</div>
         </div>
@@ -341,7 +404,6 @@ with col_tabelas:
                 pnl_dolar = valor_atual_ordem - float(o['valor_investido_usdt'])
                 pnl_pct = (pnl_dolar / float(o['valor_investido_usdt'])) * 100
                 
-                # Pegar icone
                 icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
                 
                 dados_abertas.append({
@@ -409,11 +471,13 @@ with col_lateral:
     st.subheader("📊 Raio-X de Performance")
     
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
+    
+    # AQUI: MUDANÇA PARA "ACERTOS / ERROS"
     st.markdown(f"""
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-family: sans-serif;">
-                <span style="color: #22c55e; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(34,197,94,0.3);">🟢 Vitórias {win_rate:.0f}%</span>
-                <span style="color: #ef4444; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(239,68,68,0.3);">Derrotas {loss_rate:.0f}% 🔴</span>
+                <span style="color: #22c55e; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(34,197,94,0.3);">🟢 Acertos {win_rate:.0f}%</span>
+                <span style="color: #ef4444; font-weight: 600; font-size: 0.95em; text-shadow: 0 0 5px rgba(239,68,68,0.3);">Erros {loss_rate:.0f}% 🔴</span>
             </div>
             <div style="width: 100%; height: 12px; background-color: rgba(239,68,68,0.2); border-radius: 6px; overflow: hidden; display: flex; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
                 <div style="width: {win_rate}%; background: linear-gradient(90deg, #16a34a, #22c55e); height: 100%; box-shadow: 0 0 10px rgba(34,197,94,0.4);"></div>
@@ -530,39 +594,6 @@ with col_lateral:
         
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-# =========================================================
-# SEÇÃO FINAL: DNA OPERACIONAL & LABORATÓRIO
-# =========================================================
-
-# ESTILO ATUALIZADO (Cards compactos e elegantes)
-st.markdown("""
-    <style>
-    .mini-metric {
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 15px 5px;
-        text-align: center;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .mini-metric:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
-    }
-    .mini-label {
-        font-size: 0.8em;
-        color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 600;
-        margin-bottom: 10px;
-        display: block;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# SEPARADOR VISUAL DOURADO
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
     <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
@@ -573,7 +604,6 @@ st.subheader("🧬 DNA Operacional", help="Painel comportamental que analisa sua
 if not historico_fechado:
     st.info("O perfil comportamental será gerado após o fechamento das primeiras operações com projeção (Alvo/Stop).")
 else:
-    # --- PARTE 1: O GRÁFICO DE ROSCA E BARRAS ---
     contagem_comportamento = {
         "🏆 Sniper": 0,
         "🥬 Mão de Alface": 0,
@@ -594,11 +624,11 @@ else:
     col_dna_grafico, col_dna_barras = st.columns([1, 2], gap="large")
     
     cores_map = {
-        "🏆 Sniper": "#10b981",       # Emerald
-        "🥬 Mão de Alface": "#F3BA2F",# Dourado
-        "🛡️ Saída Estratégica": "#64748b", # Slate
-        "🛑 Resiliência": "#f97316",  # Laranja
-        "💥 Descontrole": "#ef4444",  # Vermelho
+        "🏆 Sniper": "#10b981",
+        "🥬 Mão de Alface": "#F3BA2F",
+        "🛡️ Saída Estratégica": "#64748b",
+        "🛑 Resiliência": "#f97316",
+        "💥 Descontrole": "#ef4444",
     }
     
     if total_validos > 0:
@@ -646,14 +676,11 @@ else:
     else:
         st.info("Aguardando dados de operações com alvo e stop para gerar o DNA.")
 
-    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL ---
-    
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
     st.subheader("⚖️ Comparação Comportamental")
     st.caption("Comparativo de performance entre operações planejadas e operações livres.")
     
-    # CÁLCULOS
     ops_estruturadas = [o for o in historico_fechado if o.get('teve_projecao')]
     ops_livres = [o for o in historico_fechado if not o.get('teve_projecao')]
     
@@ -674,7 +701,6 @@ else:
     
     col_c1, col_c2, col_c3 = st.columns(3)
     
-    # CARD 1: LUCRO
     with col_c1:
         st.markdown(f"""
             <div class="mini-metric">
@@ -693,11 +719,11 @@ else:
             </div>
         """, unsafe_allow_html=True)
         
-    # CARD 2: WIN RATE
     with col_c2:
+        # AQUI: TAXA DE ACERTO
         st.markdown(f"""
             <div class="mini-metric">
-                <span class="mini-label">WIN RATE</span>
+                <span class="mini-label">TAXA DE ACERTO</span>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
                         <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">{wr_est:.0f}%</div>
@@ -712,11 +738,11 @@ else:
             </div>
         """, unsafe_allow_html=True)
         
-    # CARD 3: PAYOFF
     with col_c3:
+        # AQUI: RETORNO MÉDIO (ANTIGO PAYOFF)
         st.markdown(f"""
             <div class="mini-metric">
-                <span class="mini-label">PAYOFF MÉDIO</span>
+                <span class="mini-label">RETORNO MÉDIO</span>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
                         <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">${media_est:.2f}</div>
@@ -731,10 +757,8 @@ else:
             </div>
         """, unsafe_allow_html=True)
 
-    # GRÁFICO COMPARATIVO DE LINHAS (LÓGICA "CORRIDA" RESTAURADA)
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 1. Separar os dados em duas listas independentes (Lógica Penúltima)
     lista_planejados = [o['lucro_usdt'] for o in historico_fechado if o.get('teve_projecao')]
     lista_livres = [o['lucro_usdt'] for o in historico_fechado if not o.get('teve_projecao')]
     
@@ -743,10 +767,9 @@ else:
     
     fig_comp = go.Figure()
     
-    # LINHA AZUL (PLANEJADO)
     if not df_est.empty:
         df_est['acumulado'] = df_est['lucro'].cumsum()
-        df_est['trade_num'] = range(1, len(df_est) + 1) # EIXO X INDEPENDENTE
+        df_est['trade_num'] = range(1, len(df_est) + 1)
         
         fig_comp.add_trace(go.Scatter(
             x=df_est['trade_num'], 
@@ -758,17 +781,16 @@ else:
             hovertemplate="Planejado: $%{y:.2f}<extra></extra>"
         ))
 
-    # LINHA AMARELA (LIVRE) - AGORA SÓLIDA
     if not df_liv.empty:
         df_liv['acumulado'] = df_liv['lucro'].cumsum()
-        df_liv['trade_num'] = range(1, len(df_liv) + 1) # EIXO X INDEPENDENTE
+        df_liv['trade_num'] = range(1, len(df_liv) + 1)
         
         fig_comp.add_trace(go.Scatter(
             x=df_liv['trade_num'], 
             y=df_liv['acumulado'], 
             mode='lines+markers', 
             name='Sem Planejamento',
-            line=dict(color=cor_amarela, width=3), # [MODIFICADO] Sem 'dash', linha solida
+            line=dict(color=cor_amarela, width=3),
             marker=dict(size=6),
             hovertemplate="Livre: $%{y:.2f}<extra></extra>"
         ))
@@ -806,77 +828,6 @@ else:
     else:
         st.info("Realize operações de ambos os tipos para visualizar a comparação gráfica.")
 
-# =========================================================
-# SEÇÃO NOVA: COFRE DOS ATIVOS (DESEMPENHO INDIVIDUAL)
-# =========================================================
-
-# CSS ESPECÍFICO PARA OS CARDS "WIDE"
-st.markdown("""
-<style>
-.asset-row {
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8)) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-top: 3px solid #F3BA2F !important;
-    border-radius: 8px !important;
-    padding: 15px 25px !important;
-    margin-bottom: 15px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-}
-.asset-row:hover {
-    transform: translateX(5px) !important;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)) !important;
-}
-.asset-identity {
-    display: flex !important;
-    align-items: center !important;
-    gap: 15px !important;
-    width: 20% !important;
-}
-.asset-icon-large {
-    font-size: 2em !important;
-}
-.asset-name-large {
-    font-size: 1.2em !important;
-    font-weight: bold !important;
-    color: white !important;
-    letter-spacing: 1px !important;
-}
-.asset-stats-container {
-    display: flex !important;
-    justify-content: space-between !important;
-    flex-grow: 1 !important;
-    align-items: center !important;
-    margin-left: 20px !important;
-}
-.asset-stat-box {
-    text-align: center !important;
-    min-width: 80px !important;
-}
-.asset-label {
-    font-size: 0.7em !important;
-    color: #9ca3af !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    margin-bottom: 4px !important;
-    font-family: sans-serif !important;
-}
-.asset-value {
-    font-size: 1.1em !important;
-    font-weight: bold !important;
-    font-family: sans-serif !important;
-}
-.vertical-divider {
-    width: 1px !important;
-    height: 30px !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
     <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
@@ -884,10 +835,8 @@ st.markdown("""
 
 st.subheader("🏦 Cofre dos Ativos", help="Análise de exposição (risco) e performance detalhada por ativo.")
 
-# --- PROCESSAMENTO DE DADOS PARA O COFRE ---
 dados_ativos = {}
 
-# 1. Processar Histórico (Fechado)
 if historico_fechado:
     for o in historico_fechado:
         simb = o.get('simbolo', 'BTC')
@@ -898,7 +847,6 @@ if historico_fechado:
         if float(o.get('lucro_usdt', 0)) > 0:
             dados_ativos[simb]['wins'] += 1
 
-# 2. Processar Ordens Abertas (Para Alocação e Preço Médio)
 if ordens_abertas:
     for o in ordens_abertas:
         simb = o.get('simbolo', 'BTC')
@@ -910,7 +858,6 @@ if ordens_abertas:
 if not dados_ativos:
     st.info("Nenhuma operação registrada para análise de ativos.")
 else:
-    # --- ANDAR 1: O RADAR DE ALOCAÇÃO + DESTAQUES ---
     col_grafico_alocacao, col_destaques = st.columns([1.2, 2], gap="large")
     
     with col_grafico_alocacao:
@@ -931,7 +878,7 @@ else:
             fig_aloc = go.Figure(data=[go.Pie(
                 labels=labels_aloc, 
                 values=values_aloc, 
-                hole=.6, # Buraco um pouco menor para caber texto
+                hole=.6, 
                 marker=dict(colors=colors_aloc, line=dict(color='#0e1117', width=3)),
                 textinfo='label+percent',
                 textposition='outside',
@@ -939,7 +886,6 @@ else:
                 showlegend=False
             )])
             
-            # AQUI ESTÁ O TRUQUE: Annotations no centro do gráfico
             fig_aloc.update_layout(
                 margin=dict(l=20, r=20, t=20, b=20),
                 height=280,
@@ -957,7 +903,6 @@ else:
             st.info("Carteira 100% Líquida.")
 
     with col_destaques:
-        # Lógica dos Destaques
         melhor_ativo = max(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
         pior_ativo = min(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
         maior_risco = max(dados_ativos.items(), key=lambda x: x[1]['investido_aberto'], default=(None, None))
@@ -1006,7 +951,6 @@ else:
             else:
                 st.markdown("<div style='padding: 15px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Líquido</div>", unsafe_allow_html=True)
 
-    # --- ANDAR 2: LISTA DE CARDS DETALHADOS ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 📜 Detalhes por Ativo")
     
@@ -1050,6 +994,7 @@ ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
 <div class="vertical-divider"></div>
 """
 
+        # AQUI: Mudança no Rótulo Interno para "Taxa de Acerto"
         html_card = f"""
 <div class="asset-row">
 <div class="asset-identity">
@@ -1066,7 +1011,7 @@ ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
 </div>
 <div class="vertical-divider"></div>
 <div class="asset-stat-box">
-<div class="asset-label">Win Rate</div>
+<div class="asset-label">Taxa de Acerto</div>
 <div class="asset-value" style="color: {cor_wr};">{win_rate:.0f}%</div>
 </div>
 <div class="vertical-divider"></div>
