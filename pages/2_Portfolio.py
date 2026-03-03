@@ -480,8 +480,42 @@ with col_lateral:
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 # =========================================================
-# SEÇÃO FINAL: DNA OPERACIONAL
+# SEÇÃO FINAL: DNA OPERACIONAL & LABORATÓRIO
 # =========================================================
+
+# ESTILO EXTRA PARA OS MINI-CARDS DE COMPARAÇÃO
+st.markdown("""
+    <style>
+    .mini-metric {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        padding: 10px 15px;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+    .mini-metric:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    .mini-label {
+        font-size: 0.75em;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+    .mini-value {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #e2e8f0;
+    }
+    .mini-sub {
+        font-size: 0.7em;
+        margin-top: 2px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # SEPARADOR VISUAL DOURADO
 st.markdown("<br><br>", unsafe_allow_html=True)
@@ -495,7 +529,7 @@ st.subheader("🧬 DNA Operacional", help="Painel comportamental que analisa sua
 if not historico_fechado:
     st.info("O perfil comportamental será gerado após o fechamento das primeiras operações com projeção (Alvo/Stop).")
 else:
-    # 1. PROCESSAMENTO DOS DADOS (SEM GANHO LIVRE / PERDA LIVRE)
+    # --- PARTE 1: O GRÁFICO DE ROSCA E BARRAS (JÁ EXISTENTE) ---
     contagem_comportamento = {
         "🏆 Sniper": 0,
         "🥬 Mão de Alface": 0,
@@ -507,28 +541,23 @@ else:
     total_validos = 0
     for o in historico_fechado:
         comp = o.get('comportamento_final')
-        # SÓ CONTA SE ESTIVER NA LISTA OFICIAL (Ignora Ganho Livre/Perda Livre)
         if comp and comp in contagem_comportamento:
             contagem_comportamento[comp] += 1
             total_validos += 1
             
-    # Filtra apenas o que tem dados para não poluir o gráfico
     dados_grafico = {k: v for k, v in contagem_comportamento.items() if v > 0}
     
-    if total_validos == 0:
-        st.warning("Nenhuma operação qualificada (com Alvo/Stop definidos) foi encerrada ainda.")
-    else:
-        col_dna_grafico, col_dna_barras = st.columns([1, 2], gap="large")
-        
-        # CORES "TACTICAL" (MAIS SÓBRIAS)
-        cores_map = {
-            "🏆 Sniper": "#10b981",       # Emerald (Verde profissional)
-            "🥬 Mão de Alface": "#F3BA2F",# Dourado Institucional
-            "🛡️ Saída Estratégica": "#64748b", # Slate (Cinza Azulado)
-            "🛑 Resiliência": "#f97316",  # Laranja Fosco
-            "💥 Descontrole": "#ef4444",  # Vermelho
-        }
-        
+    col_dna_grafico, col_dna_barras = st.columns([1, 2], gap="large")
+    
+    cores_map = {
+        "🏆 Sniper": "#10b981",       # Emerald
+        "🥬 Mão de Alface": "#F3BA2F",# Dourado
+        "🛡️ Saída Estratégica": "#64748b", # Slate
+        "🛑 Resiliência": "#f97316",  # Laranja
+        "💥 Descontrole": "#ef4444",  # Vermelho
+    }
+    
+    if total_validos > 0:
         with col_dna_grafico:
             labels = list(dados_grafico.keys())
             values = list(dados_grafico.values())
@@ -540,16 +569,15 @@ else:
                 hole=.6,
                 marker=dict(colors=colors, line=dict(color='#0f172a', width=3)),
                 textinfo='percent',
-                textposition='outside', # [MODIFICAÇÃO]: NÚMEROS FORA
-                textfont=dict(size=14, color='white', family="sans-serif"), # [MODIFICAÇÃO]: BRANCOS E MAIORES
+                textposition='outside',
+                textfont=dict(size=14, color='white', family="sans-serif"),
                 hoverinfo='label+value'
             )])
             
-            # [MODIFICAÇÃO]: AJUSTE DE ALTURA E MARGENS PARA EVITAR CORTE
             fig_dna.update_layout(
                 showlegend=False,
-                margin=dict(l=10, r=10, t=10, b=50), # Margem inferior maior
-                height=250, # Altura ligeiramente maior
+                margin=dict(l=10, r=10, t=10, b=50),
+                height=250,
                 paper_bgcolor='rgba(0,0,0,0)',
                 annotations=[dict(text=f"{total_validos}", x=0.5, y=0.5, font_size=20, showarrow=False, font_color="white")]
             )
@@ -557,12 +585,10 @@ else:
             st.markdown(f"<div style='text-align: center; color: gray; font-size: 0.8em; margin-top: -10px;'>Operações Qualificadas</div>", unsafe_allow_html=True)
 
         with col_dna_barras:
-            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True) # Espaçamento
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             for item, qtd in dados_grafico.items():
                 pct = (qtd / total_validos) * 100
                 cor = cores_map.get(item, "gray")
-                
-                # HTML DA BARRA DE PROGRESSO (SEM NÚMERO NO FINAL)
                 st.markdown(f"""
                     <div style="margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -573,5 +599,137 @@ else:
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
+    else:
+        st.info("Aguardando dados de operações com alvo e stop para gerar o DNA.")
+
+    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (NOVA SEÇÃO) ---
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
+    st.markdown("#### ⚖️ Comparação Comportamental")
+    st.caption("Performance: Operações Planejadas (Alvo/Stop definidos) vs. Operações Livres (Feeling).")
+    
+    # CÁLCULOS COMPARATIVOS
+    ops_estruturadas = [o for o in historico_fechado if o.get('teve_projecao')]
+    ops_livres = [o for o in historico_fechado if not o.get('teve_projecao')]
+    
+    # Métricas Estruturadas
+    lucro_est = sum(o['lucro_usdt'] for o in ops_estruturadas)
+    wins_est = sum(1 for o in ops_estruturadas if o['lucro_usdt'] > 0)
+    total_est = len(ops_estruturadas)
+    wr_est = (wins_est / total_est * 100) if total_est > 0 else 0.0
+    media_est = (lucro_est / total_est) if total_est > 0 else 0.0
+    
+    # Métricas Livres
+    lucro_liv = sum(o['lucro_usdt'] for o in ops_livres)
+    wins_liv = sum(1 for o in ops_livres if o['lucro_usdt'] > 0)
+    total_liv = len(ops_livres)
+    wr_liv = (wins_liv / total_liv * 100) if total_liv > 0 else 0.0
+    media_liv = (lucro_liv / total_liv) if total_liv > 0 else 0.0
+    
+    # CORES
+    cor_azul = "#3b82f6"
+    cor_amarela = "#F3BA2F"
+    
+    # CARDS COMPARATIVOS (MINI-CARDS)
+    col_c1, col_c2, col_c3 = st.columns(3)
+    
+    with col_c1:
+        st.markdown(f"""
+            <div class="mini-metric">
+                <div class="mini-label">Lucro Líquido</div>
+                <div style="display: flex; justify-content: space-around; margin-top: 5px;">
+                    <div><span style="color: {cor_azul}; font-weight: bold;">${lucro_est:.2f}</span></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
+                    <div><span style="color: {cor_amarela}; font-weight: bold;">${lucro_liv:.2f}</span></div>
+                </div>
+                <div class="mini-sub" style="color: gray;">Total Acumulado</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col_c2:
+        st.markdown(f"""
+            <div class="mini-metric">
+                <div class="mini-label">Win Rate</div>
+                <div style="display: flex; justify-content: space-around; margin-top: 5px;">
+                    <div><span style="color: {cor_azul}; font-weight: bold;">{wr_est:.0f}%</span></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
+                    <div><span style="color: {cor_amarela}; font-weight: bold;">{wr_liv:.0f}%</span></div>
+                </div>
+                <div class="mini-sub" style="color: gray;">Taxa de Acerto</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col_c3:
+        st.markdown(f"""
+            <div class="mini-metric">
+                <div class="mini-label">Payoff Médio</div>
+                <div style="display: flex; justify-content: space-around; margin-top: 5px;">
+                    <div><span style="color: {cor_azul}; font-weight: bold;">${media_est:.2f}</span></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
+                    <div><span style="color: {cor_amarela}; font-weight: bold;">${media_liv:.2f}</span></div>
+                </div>
+                <div class="mini-sub" style="color: gray;">Resultado por Trade</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # GRÁFICO COMPARATIVO DE LINHAS
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Preparar dados para o gráfico
+    # Precisamos criar uma linha do tempo única e somar acumulativamente para cada categoria
+    df_comp = pd.DataFrame(historico_fechado)
+    if not df_comp.empty:
+        df_comp['Datahora'] = pd.to_datetime(df_comp['data_fechamento'] + ' ' + df_comp['hora_fechamento'])
+        df_comp = df_comp.sort_values('Datahora')
+        
+        x_axis = []
+        y_est = []
+        y_liv = []
+        
+        acum_est = 0.0
+        acum_liv = 0.0
+        
+        count = 1
+        for _, row in df_comp.iterrows():
+            lucro = float(row['lucro_usdt'])
+            if row.get('teve_projecao'):
+                acum_est += lucro
+            else:
+                acum_liv += lucro
+            
+            x_axis.append(count)
+            y_est.append(acum_est)
+            y_liv.append(acum_liv)
+            count += 1
+            
+        fig_comp = go.Figure()
+        
+        # Linha Planejada (Azul)
+        fig_comp.add_trace(go.Scatter(
+            x=x_axis, y=y_est, mode='lines', name='Com Planejamento',
+            line=dict(color=cor_azul, width=2),
+            hovertemplate="Planejado: $%{y:.2f}<extra></extra>"
+        ))
+        
+        # Linha Livre (Amarela)
+        fig_comp.add_trace(go.Scatter(
+            x=x_axis, y=y_liv, mode='lines', name='Sem Planejamento',
+            line=dict(color=cor_amarela, width=2, dash='dot'), # Tracejado para diferenciar
+            hovertemplate="Livre: $%{y:.2f}<extra></extra>"
+        ))
+        
+        fig_comp.update_layout(
+            height=280,
+            margin=dict(l=0, r=0, t=10, b=0),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="white", size=10)),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, title="Linha do Tempo (Trades Fechados)"),
+            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', zeroline=True, zerolinecolor='rgba(255,255,255,0.1)', tickfont=dict(color="gray")),
+            hovermode="x unified"
+        )
+        
+        st.plotly_chart(fig_comp, use_container_width=True, config={'displayModeBar': False})
 
 st.divider()
