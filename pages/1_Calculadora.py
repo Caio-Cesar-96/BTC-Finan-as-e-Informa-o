@@ -93,6 +93,25 @@ st.markdown("""
             font-weight: bold;
             color: white;
         }
+        
+        /* CSS ESPECIAL PARA O CARD DE COTAÇÃO "FAKE" */
+        .fake-input-box {
+            background-color: #0e1117; /* Cor exata do fundo do input dark mode */
+            border: 1px solid rgba(250, 250, 250, 0.2);
+            border-radius: 0.5rem;
+            padding: 0px 12px;
+            height: 46px; /* Altura exata do st.selectbox */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: "Source Sans Pro", sans-serif;
+        }
+        .fake-label {
+            font-size: 14px;
+            color: rgba(250, 250, 250, 0.6); /* Cor exata do label Streamlit */
+            margin-bottom: 0.5rem;
+            font-family: "Source Sans Pro", sans-serif;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -102,29 +121,36 @@ st.markdown("""
 def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
     if not alvo and not stop:
         return None
+        
     lucro_real = preco_venda - preco_compra
+    
     if lucro_real >= 0:
         if alvo and alvo > preco_compra:
             alvo_esperado = alvo - preco_compra
             pct_alcancado = lucro_real / alvo_esperado
+            
             if pct_alcancado >= 0.90: return "🏆 Sniper"
             elif pct_alcancado > 0.10: return "🥬 Mão de Alface"
             else: return "🛡️ Saída Estratégica"
-        else: return "⚖️ Ganho Livre"
+        else:
+            return "⚖️ Ganho Livre"
     else:
         if stop and stop < preco_compra:
             perda_real = preco_compra - preco_venda
             stop_maximo = preco_compra - stop
             pct_perdido = perda_real / stop_maximo
+            
             if pct_perdido <= 0.10: return "🛡️ Saída Estratégica"
             elif pct_perdido <= 1.10: return "🛑 Resiliência"
             else: return "💥 Descontrole"
-        else: return "💥 Perda Livre"
+        else:
+            return "💥 Perda Livre"
 
 # --- FUNÇÕES DE API E SINCRONIZAÇÃO ---
 def obter_cotacao(simbolo):
     if not simbolo: return 0.0
     try:
+        # Monta o par (Ex: BTC + USDT = BTCUSDT)
         par = f"{simbolo}USDT"
         url = f"https://api.binance.us/api/v3/ticker/price?symbol={par}"
         resposta = requests.get(url, timeout=3)
@@ -184,8 +210,9 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- ROW 1: SELETOR DE ATIVOS E CARD DE PREÇO (SIMETRIA PERFEITA) ---
-            col_sel_1, col_sel_2 = st.columns(2) # 50% para cada lado, igual a linha de baixo
+            # --- ROW 1: SELETOR E CARD "GÊMEO" ---
+            # Usamos CSS personalizado (.fake-input-box) para imitar exatamente o selectbox
+            col_sel_1, col_sel_2 = st.columns(2)
             
             with col_sel_1:
                 ativo_selecionado = st.selectbox(
@@ -198,22 +225,13 @@ with col_boleta:
             cotacao_atual = obter_cotacao(ativo_selecionado)
             
             with col_sel_2:
-                # HTML Clone do Input do Streamlit (Mesma altura, borda e cor de fundo)
+                # Estrutura HTML que clona a altura, margem e fonte do componente do Streamlit
                 st.markdown(f"""
-                    <div style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%;">
-                        <label style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem; font-family: 'Source Sans Pro', sans-serif;">Cotação Atual ({ativo_selecionado})</label>
-                        <div style="
-                            background-color: rgba(255, 255, 255, 0.05); /* Fundo sutil igual inputs */
-                            border: 1px solid rgba(250, 250, 250, 0.2); /* Borda padrão */
-                            border-radius: 0.5rem;
-                            padding: 0 1rem;
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            min-height: 45px; /* Altura padrão dos inputs do Streamlit */
-                        ">
-                            <strong style="font-size: 1.1em; color: #F3BA2F; font-family: monospace;">${cotacao_atual:,.2f}</strong>
-                            <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
+                    <div>
+                        <div class="fake-label">Cotação Atual ({ativo_selecionado})</div>
+                        <div class="fake-input-box">
+                            <span style="font-size: 1rem; color: #F3BA2F; font-weight: 600;">${cotacao_atual:,.2f}</span>
+                            <span style="font-size: 0.8rem; color: #808495;">USDT</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -317,11 +335,14 @@ with col_boleta:
                 
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 
-                # Card de Venda Alinhado
+                # Card de cotação atual na aba de venda também alinhado
                 st.markdown(f"""
-                    <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="color: #9ca3af; font-size: 0.95em;">Mercado Atual ({simbolo_ativo})</span>
-                        <strong style="font-size: 1.3em; color: #F3BA2F;">&#36;{preco_atual_venda:,.2f}</strong>
+                    <div>
+                        <div class="fake-label">Mercado Atual ({simbolo_ativo})</div>
+                        <div class="fake-input-box">
+                            <span style="font-size: 1rem; color: #F3BA2F; font-weight: 600;">${preco_atual_venda:,.2f}</span>
+                            <span style="font-size: 0.8rem; color: #808495;">USDT</span>
+                        </div>
                     </div>
                 """, unsafe_allow_html=True)
                 
@@ -407,7 +428,9 @@ with col_boleta:
                     }
                     
                     try:
+                        # Update seguro usando o ID específico
                         supabase.table("operacoes").update(dados_atualizacao).eq("id", ordem_ativa['id']).execute()
+                        
                         ordem_ativa.update(dados_atualizacao)
                         st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
                         st.session_state['historico_fechado'].append(ordem_ativa)
@@ -477,7 +500,9 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
+            # Obtém o símbolo da moeda (se não existir, assume BTC)
             simbolo_display = t.get('simbolo', 'BTC')
+            
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
