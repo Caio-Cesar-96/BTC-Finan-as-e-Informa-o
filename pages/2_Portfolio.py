@@ -478,14 +478,14 @@ with col_lateral:
 # SEÇÃO FINAL: DNA OPERACIONAL & LABORATÓRIO
 # =========================================================
 
-# ESTILO ATUALIZADO PARA OS MINI-CARDS (Números Grandes)
+# ESTILO ATUALIZADO (Cards mais compactos e limpos)
 st.markdown("""
     <style>
     .mini-metric {
         background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
         border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 20px 10px;
+        border-radius: 6px;
+        padding: 15px 5px; /* Menos espaçamento vertical */
         text-align: center;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
@@ -495,29 +495,13 @@ st.markdown("""
         background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
     }
     .mini-label {
-        font-size: 0.85em;
+        font-size: 0.8em;
         color: #9ca3af;
         text-transform: uppercase;
         letter-spacing: 1px;
         font-weight: 600;
-        display: inline-block;
-    }
-    .help-icon {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        background-color: rgba(255,255,255,0.1);
-        color: #9ca3af;
-        border-radius: 50%;
-        text-align: center;
-        line-height: 16px;
-        font-size: 11px;
-        margin-left: 6px;
-        cursor: help;
-    }
-    .help-icon:hover {
-        background-color: #3b82f6;
-        color: white;
+        margin-bottom: 10px;
+        display: block;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -606,11 +590,13 @@ else:
     else:
         st.info("Aguardando dados de operações com alvo e stop para gerar o DNA.")
 
-    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (CARDS GRANDES) ---
+    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL ---
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
-    st.markdown("#### ⚖️ Comparação Comportamental")
+    st.subheader("⚖️ Comparação Comportamental")
+    # TEXTO DE EXPLICAÇÃO RESTAURADO
+    st.caption("Comparativo de performance entre operações estruturadas (com Alvo/Stop definidos) e operações livres (Feeling).")
     
     # CÁLCULOS
     ops_estruturadas = [o for o in historico_fechado if o.get('teve_projecao')]
@@ -633,67 +619,58 @@ else:
     
     col_c1, col_c2, col_c3 = st.columns(3)
     
-    # CARD 1
+    # CARD 1: LUCRO
     with col_c1:
         st.markdown(f"""
             <div class="mini-metric">
-                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
-                    <span class="mini-label">LUCRO LÍQUIDO</span>
-                    <span class="help-icon" title="Soma total do resultado financeiro de todas as operações encerradas em cada categoria.">?</span>
-                </div>
+                <span class="mini-label">LUCRO LÍQUIDO</span>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 2.2em; font-weight: bold; line-height: 1;">${lucro_est:.2f}</div>
-                        <div style="font-size: 0.8em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 5px;">planejado</div>
+                        <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">${lucro_est:.2f}</div>
+                        <div style="font-size: 0.75em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 4px;">planejado</div>
                     </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 45px;"></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 30px;"></div>
                     <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 2.2em; font-weight: bold; line-height: 1;">${lucro_liv:.2f}</div>
-                        <div style="font-size: 0.8em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 5px;">livre</div>
+                        <div style="color: {cor_amarela}; font-size: 1.8em; font-weight: bold; line-height: 1;">${lucro_liv:.2f}</div>
+                        <div style="font-size: 0.75em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 4px;">livre</div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-    # CARD 2
+    # CARD 2: WIN RATE
     with col_c2:
         st.markdown(f"""
             <div class="mini-metric">
-                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
-                    <span class="mini-label">WIN RATE</span>
-                    <span class="help-icon" title="Porcentagem de trades que fecharam no positivo (lucro > 0).">?</span>
-                </div>
+                <span class="mini-label">WIN RATE</span>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 2.2em; font-weight: bold; line-height: 1;">{wr_est:.0f}%</div>
-                        <div style="font-size: 0.8em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 5px;">planejado</div>
+                        <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">{wr_est:.0f}%</div>
+                        <div style="font-size: 0.75em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 4px;">planejado</div>
                     </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 45px;"></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 30px;"></div>
                     <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 2.2em; font-weight: bold; line-height: 1;">{wr_liv:.0f}%</div>
-                        <div style="font-size: 0.8em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 5px;">livre</div>
+                        <div style="color: {cor_amarela}; font-size: 1.8em; font-weight: bold; line-height: 1;">{wr_liv:.0f}%</div>
+                        <div style="font-size: 0.75em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 4px;">livre</div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-    # CARD 3
+    # CARD 3: PAYOFF
     with col_c3:
         st.markdown(f"""
             <div class="mini-metric">
-                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
-                    <span class="mini-label">PAYOFF MÉDIO</span>
-                    <span class="help-icon" title="Média simples de lucro (ou prejuízo) por operação realizada.">?</span>
-                </div>
+                <span class="mini-label">PAYOFF MÉDIO</span>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 2.2em; font-weight: bold; line-height: 1;">${media_est:.2f}</div>
-                        <div style="font-size: 0.8em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 5px;">planejado</div>
+                        <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">${media_est:.2f}</div>
+                        <div style="font-size: 0.75em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 4px;">planejado</div>
                     </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 45px;"></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 30px;"></div>
                     <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 2.2em; font-weight: bold; line-height: 1;">${media_liv:.2f}</div>
-                        <div style="font-size: 0.8em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 5px;">livre</div>
+                        <div style="color: {cor_amarela}; font-size: 1.8em; font-weight: bold; line-height: 1;">${media_liv:.2f}</div>
+                        <div style="font-size: 0.75em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 4px;">livre</div>
                     </div>
                 </div>
             </div>
