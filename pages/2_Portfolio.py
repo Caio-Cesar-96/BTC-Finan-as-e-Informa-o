@@ -365,7 +365,6 @@ with col3:
     """, unsafe_allow_html=True)
 
 with col4:
-    # AQUI: MUDANÇA DE "WIN RATE" PARA "TAXA DE ACERTO"
     st.markdown(f"""
         <div class="metric-card card-winrate">
             <div class="metric-title">Taxa de Acerto</div>
@@ -472,7 +471,6 @@ with col_lateral:
     
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     
-    # AQUI: MUDANÇA PARA "ACERTOS / ERROS"
     st.markdown(f"""
         <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-family: sans-serif;">
@@ -720,7 +718,6 @@ else:
         """, unsafe_allow_html=True)
         
     with col_c2:
-        # AQUI: TAXA DE ACERTO
         st.markdown(f"""
             <div class="mini-metric">
                 <span class="mini-label">TAXA DE ACERTO</span>
@@ -739,7 +736,6 @@ else:
         """, unsafe_allow_html=True)
         
     with col_c3:
-        # AQUI: RETORNO MÉDIO (ANTIGO PAYOFF)
         st.markdown(f"""
             <div class="mini-metric">
                 <span class="mini-label">RETORNO MÉDIO</span>
@@ -887,8 +883,8 @@ else:
             )])
             
             fig_aloc.update_layout(
-                margin=dict(l=20, r=20, t=20, b=20),
-                height=280,
+                margin=dict(l=20, r=20, t=20, b=60),
+                height=320,
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
                 annotations=[dict(
@@ -994,7 +990,6 @@ ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
 <div class="vertical-divider"></div>
 """
 
-        # AQUI: Mudança no Rótulo Interno para "Taxa de Acerto"
         html_card = f"""
 <div class="asset-row">
 <div class="asset-identity">
