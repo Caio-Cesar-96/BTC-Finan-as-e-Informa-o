@@ -483,37 +483,33 @@ with col_lateral:
 # SEÇÃO FINAL: DNA OPERACIONAL & LABORATÓRIO
 # =========================================================
 
-# ESTILO EXTRA PARA OS MINI-CARDS DE COMPARAÇÃO
+# ESTILO ATUALIZADO PARA OS MINI-CARDS (Compactos e Elegantes)
 st.markdown("""
     <style>
     .mini-metric {
-        background: rgba(255, 255, 255, 0.03);
+        /* Fundo igual aos cards principais (Degradê Azul Escuro) */
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
         border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-        padding: 10px 15px;
+        border-radius: 8px;
+        padding: 15px 10px; /* Padding reduzido para ficar mais compacto */
         text-align: center;
-        transition: all 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: help; /* Cursor de interrogação/ajuda ao passar o mouse */
     }
     .mini-metric:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
     }
     .mini-label {
-        font-size: 0.75em;
+        font-size: 0.8em;
         color: #9ca3af;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 2px;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        font-weight: 500;
     }
-    .mini-value {
-        font-size: 1.1em;
-        font-weight: bold;
-        color: #e2e8f0;
-    }
-    .mini-sub {
-        font-size: 0.7em;
-        margin-top: 2px;
-    }
+    /* Removedor de letras miúdas (mini-sub) pois você pediu para tirar */
     </style>
 """, unsafe_allow_html=True)
 
@@ -523,13 +519,12 @@ st.markdown("""
     <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
 """, unsafe_allow_html=True)
 
-# TÍTULO COM TOOLTIP (HELP) ATUALIZADO
 st.subheader("🧬 DNA Operacional", help="Painel comportamental que analisa sua disciplina com base em metas predefinidas de Alvo e Stop.")
 
 if not historico_fechado:
     st.info("O perfil comportamental será gerado após o fechamento das primeiras operações com projeção (Alvo/Stop).")
 else:
-    # --- PARTE 1: O GRÁFICO DE ROSCA E BARRAS (JÁ EXISTENTE) ---
+    # --- PARTE 1: O GRÁFICO DE ROSCA E BARRAS (MANTIDO IGUAL) ---
     contagem_comportamento = {
         "🏆 Sniper": 0,
         "🥬 Mão de Alface": 0,
@@ -602,7 +597,7 @@ else:
     else:
         st.info("Aguardando dados de operações com alvo e stop para gerar o DNA.")
 
-    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (NOVA SEÇÃO) ---
+    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (CARDS REFEITOS) ---
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
@@ -631,45 +626,42 @@ else:
     cor_azul = "#3b82f6"
     cor_amarela = "#F3BA2F"
     
-    # CARDS COMPARATIVOS (MINI-CARDS)
+    # CARDS COMPARATIVOS (ATUALIZADOS)
     col_c1, col_c2, col_c3 = st.columns(3)
     
     with col_c1:
         st.markdown(f"""
-            <div class="mini-metric">
+            <div class="mini-metric" title="Soma total do lucro/prejuízo de todas as operações fechadas em cada categoria.">
                 <div class="mini-label">Lucro Líquido</div>
-                <div style="display: flex; justify-content: space-around; margin-top: 5px;">
-                    <div><span style="color: {cor_azul}; font-weight: bold;">${lucro_est:.2f}</span></div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
-                    <div><span style="color: {cor_amarela}; font-weight: bold;">${lucro_liv:.2f}</span></div>
+                <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+                    <span style="color: {cor_azul}; font-weight: bold; font-size: 1.2em;">${lucro_est:.2f}</span>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 20px;"></div>
+                    <span style="color: {cor_amarela}; font-weight: bold; font-size: 1.2em;">${lucro_liv:.2f}</span>
                 </div>
-                <div class="mini-sub" style="color: gray;">Total Acumulado</div>
             </div>
         """, unsafe_allow_html=True)
         
     with col_c2:
         st.markdown(f"""
-            <div class="mini-metric">
+            <div class="mini-metric" title="Porcentagem de operações que terminaram positivas (Lucro > 0).">
                 <div class="mini-label">Win Rate</div>
-                <div style="display: flex; justify-content: space-around; margin-top: 5px;">
-                    <div><span style="color: {cor_azul}; font-weight: bold;">{wr_est:.0f}%</span></div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
-                    <div><span style="color: {cor_amarela}; font-weight: bold;">{wr_liv:.0f}%</span></div>
+                <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+                    <span style="color: {cor_azul}; font-weight: bold; font-size: 1.2em;">{wr_est:.0f}%</span>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 20px;"></div>
+                    <span style="color: {cor_amarela}; font-weight: bold; font-size: 1.2em;">{wr_liv:.0f}%</span>
                 </div>
-                <div class="mini-sub" style="color: gray;">Taxa de Acerto</div>
             </div>
         """, unsafe_allow_html=True)
         
     with col_c3:
         st.markdown(f"""
-            <div class="mini-metric">
+            <div class="mini-metric" title="Média aritimética de lucro ou prejuízo por operação realizada.">
                 <div class="mini-label">Payoff Médio</div>
-                <div style="display: flex; justify-content: space-around; margin-top: 5px;">
-                    <div><span style="color: {cor_azul}; font-weight: bold;">${media_est:.2f}</span></div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
-                    <div><span style="color: {cor_amarela}; font-weight: bold;">${media_liv:.2f}</span></div>
+                <div style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+                    <span style="color: {cor_azul}; font-weight: bold; font-size: 1.2em;">${media_est:.2f}</span>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 20px;"></div>
+                    <span style="color: {cor_amarela}; font-weight: bold; font-size: 1.2em;">${media_liv:.2f}</span>
                 </div>
-                <div class="mini-sub" style="color: gray;">Resultado por Trade</div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -677,7 +669,6 @@ else:
     st.markdown("<br>", unsafe_allow_html=True)
     
     # Preparar dados para o gráfico
-    # Precisamos criar uma linha do tempo única e somar acumulativamente para cada categoria
     df_comp = pd.DataFrame(historico_fechado)
     if not df_comp.empty:
         df_comp['Datahora'] = pd.to_datetime(df_comp['data_fechamento'] + ' ' + df_comp['hora_fechamento'])
