@@ -24,7 +24,16 @@ except Exception as e:
     st.error("⚠️ Erro ao conectar com o Banco de Dados. Verifique os Secrets.")
     st.stop()
 
-# --- CSS INSTITUCIONAL E CARDS COM "VIDA" ---
+# --- CONFIGURAÇÃO DE ATIVOS (CORES E ÍCONES) ---
+ASSETS_CONFIG = {
+    "BTC": {"nome": "Bitcoin", "icon": "🟠", "cor": "#F3BA2F"},
+    "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
+    "SOL": {"nome": "Solana", "icon": "🟣", "cor": "#14F195"},
+    "BNB": {"nome": "Binance Coin", "icon": "🟡", "cor": "#F3BA2F"},
+    "PAXG": {"nome": "PAX Gold", "icon": "🏆", "cor": "#D4AF37"}
+}
+
+# --- CSS INSTITUCIONAL E CARDS ---
 st.markdown("""
     <style>
         /* MATAR A BARRA LATERAL PADRÃO */
@@ -82,17 +91,47 @@ st.markdown("""
         .text-red { color: #dc2626; }
         .text-gray { color: #6b7280; }
         .text-gold { color: #F3BA2F; }
+        
+        /* CSS PARA OS CARDS DE ATIVOS INDIVIDUAIS */
+        .asset-card {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .asset-card:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            transform: scale(1.02);
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÕES DE API E SINCRONIZAÇÃO COM MÁSCARA ---
-def obter_preco_btc():
-    try:
-        url = "https://api.binance.us/api/v3/ticker/price?symbol=BTCUSDT"
-        resposta = requests.get(url, timeout=3)
-        return float(resposta.json()["price"])
-    except:
-        return 65000.0
+# --- FUNÇÕES DE API INTELIGENTE (MULTI-MOEDA) ---
+def obter_dicionario_precos(lista_simbolos):
+    """
+    Recebe uma lista de simbolos ['BTC', 'ETH'] e retorna um dict {'BTC': 65000, 'ETH': 3500}
+    """
+    precos = {}
+    if not lista_simbolos:
+        return precos
+        
+    # Remove duplicatas e garante padrão
+    lista_limpa = list(set([s for s in lista_simbolos if s]))
+    
+    for simb in lista_limpa:
+        try:
+            par = f"{simb}USDT"
+            url = f"https://api.binance.us/api/v3/ticker/price?symbol={par}"
+            resposta = requests.get(url, timeout=2)
+            if resposta.status_code == 200:
+                precos[simb] = float(resposta.json()["price"])
+            else:
+                precos[simb] = 0.0
+        except:
+            precos[simb] = 0.0
+    return precos
 
 def carregar_dados_nuvem():
     try:
@@ -104,6 +143,9 @@ def carregar_dados_nuvem():
         
         for indice, d in enumerate(dados_ordenados):
             d['display_id'] = f"{(indice + 1):03d}"
+            # Garante compatibilidade com ordens antigas sem símbolo
+            if 'simbolo' not in d or not d['simbolo']:
+                d['simbolo'] = 'BTC'
             
         abertas = [d for d in dados_ordenados if d['status'] == 'Aberto']
         fechadas = [d for d in dados_ordenados if d['status'] == 'Fechado']
@@ -144,13 +186,23 @@ with col_refresh:
 ordens_abertas = st.session_state.get('ordens_abertas', [])
 historico_fechado = st.session_state.get('historico_fechado', [])
 
-# --- CÁLCULOS DO MOTOR PYTHON ---
-preco_btc_atual = obter_preco_btc()
+# --- CÁLCULOS DO MOTOR PYTHON (AGORA MULTI-MOEDA) ---
+
+# 1. Descobrir quais moedas temos em aberto para buscar preços
+simbolos_em_aberto = list(set([o['simbolo'] for o in ordens_abertas]))
+cotacoes_atuais = obter_dicionario_precos(simbolos_em_aberto)
 
 total_investido_aberto = sum(float(o['valor_investido_usdt']) for o in ordens_abertas)
-total_btc_aberto = sum(float(o['quantidade_btc']) for o in ordens_abertas)
-valor_mercado_atual = total_btc_aberto * preco_btc_atual
-pnl_flutuante = valor_mercado_atual - total_investido_aberto
+
+# 2. Calcular valor de mercado somando cada moeda individualmente
+valor_mercado_atual_total = 0.0
+for o in ordens_abertas:
+    simb = o.get('simbolo', 'BTC')
+    preco_atual = cotacoes_atuais.get(simb, 0.0)
+    qtd = float(o['quantidade_btc']) # Coluna chama quantidade_btc mas guarda a qtd do ativo
+    valor_mercado_atual_total += qtd * preco_atual
+
+pnl_flutuante = valor_mercado_atual_total - total_investido_aberto
 
 pnl_flutuante_pct = 0.0
 if total_investido_aberto > 0:
@@ -171,7 +223,7 @@ sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
 
 cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
 
-# --- CÁLCULOS AVANÇADOS ---
+# --- CÁLCULOS AVANÇADOS (PAYOFF, STREAK) ---
 media_gain = 0.0
 media_loss = 0.0
 streak_count = 0
@@ -228,7 +280,7 @@ with col1:
         <div class="metric-card card-capital">
             <div class="metric-title">Capital Alocado (Risco)</div>
             <div class="metric-value">&#36;{total_investido_aberto:,.2f}</div>
-            <div class="metric-sub text-gold">{total_btc_aberto:.8f} BTC em custódia</div>
+            <div class="metric-sub text-gold">Multi-Ativos</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -282,26 +334,30 @@ with col_tabelas:
         else:
             dados_abertas = []
             for o in ordens_abertas:
-                valor_atual_ordem = float(o['quantidade_btc']) * preco_btc_atual
+                simb = o.get('simbolo', 'BTC')
+                preco_atual_ativo = cotacoes_atuais.get(simb, 0.0)
+                
+                valor_atual_ordem = float(o['quantidade_btc']) * preco_atual_ativo
                 pnl_dolar = valor_atual_ordem - float(o['valor_investido_usdt'])
                 pnl_pct = (pnl_dolar / float(o['valor_investido_usdt'])) * 100
                 
+                # Pegar icone
+                icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
+                
                 dados_abertas.append({
-                    'Ordem': f"#{o.get('display_id', '???')}",
+                    'Ativo': f"{icone} {simb}",
                     'Investido': float(o['valor_investido_usdt']),
-                    'Volume (BTC)': float(o['quantidade_btc']),
-                    'Preço Pago': float(o['preco_compra']),
+                    'Volume': float(o['quantidade_btc']),
                     'PnL Atual ($)': pnl_dolar,
                     'Rentabilidade (%)': pnl_pct,
-                    'Data Compra': f"{o.get('data_abertura_br', '')} {o.get('hora_abertura', '')}"
+                    'ID': f"#{o.get('display_id', '???')}"
                 })
                 
             df_abertas = pd.DataFrame(dados_abertas)
             
             estilo_abertas = df_abertas.style.map(pintar_tabela, subset=['PnL Atual ($)', 'Rentabilidade (%)']).format({
                 'Investido': '${:,.2f}',
-                'Volume (BTC)': '{:.8f}',
-                'Preço Pago': '${:,.2f}',
+                'Volume': '{:.6f}',
                 'PnL Atual ($)': '${:,.2f}',
                 'Rentabilidade (%)': '{:+.2f}%'
             })
@@ -317,22 +373,22 @@ with col_tabelas:
                 comportamento = o.get('comportamento_final')
                 if not comportamento:
                     comportamento = "---"
+                
+                simb = o.get('simbolo', 'BTC')
+                icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
                     
                 dados_fechadas.append({
-                    'Ordem': f"#{o.get('display_id', '???')}",
-                    'Investido': float(o.get('valor_investido_usdt', 0)),
+                    'Ativo': f"{icone} {simb}",
                     'Retorno Final': float(o.get('valor_recebido_usdt', 0)),
                     'Lucro Líquido ($)': float(o.get('lucro_usdt', 0)),
                     'Rentabilidade (%)': float(o.get('lucro_pct', 0)),
                     'Disciplina': comportamento,
-                    'Entrada': f"{o.get('data_abertura_br', '')}",
-                    'Saída': f"{o.get('data_fechamento_br', '')}"
+                    'ID': f"#{o.get('display_id', '???')}"
                 })
                 
             df_fechadas = pd.DataFrame(dados_fechadas)
             
             estilo_fechadas = df_fechadas.style.map(pintar_tabela, subset=['Lucro Líquido ($)', 'Rentabilidade (%)']).format({
-                'Investido': '${:,.2f}',
                 'Retorno Final': '${:,.2f}',
                 'Lucro Líquido ($)': '${:,.2f}',
                 'Rentabilidade (%)': '{:+.2f}%'
@@ -725,7 +781,6 @@ else:
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="white", size=10)),
-        # [MODIFICADO] TÍTULO DO EIXO X LIMPO
         xaxis=dict(
             showgrid=False, 
             zeroline=False, 
@@ -750,5 +805,67 @@ else:
         st.plotly_chart(fig_comp, use_container_width=True, config={'displayModeBar': False})
     else:
         st.info("Realize operações de ambos os tipos para visualizar a comparação gráfica.")
+
+# =========================================================
+# SEÇÃO NOVA: COFRE DOS ATIVOS (DESEMPENHO INDIVIDUAL)
+# =========================================================
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown("""
+    <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
+""", unsafe_allow_html=True)
+
+st.subheader("🏦 Cofre dos Ativos", help="Desempenho detalhado separado por moeda.")
+
+if not historico_fechado:
+    st.info("O cofre será aberto assim que você fechar sua primeira operação.")
+else:
+    # 1. Agrupar dados por moeda
+    dados_por_ativo = {}
+    for o in historico_fechado:
+        simb = o.get('simbolo', 'BTC')
+        if simb not in dados_por_ativo:
+            dados_por_ativo[simb] = {'lucro': 0.0, 'wins': 0, 'total': 0}
+        
+        dados_por_ativo[simb]['lucro'] += float(o.get('lucro_usdt', 0))
+        dados_por_ativo[simb]['total'] += 1
+        if float(o.get('lucro_usdt', 0)) > 0:
+            dados_por_ativo[simb]['wins'] += 1
+            
+    # 2. Criar colunas dinâmicas (máximo 3 por linha para não espremer)
+    ativos_listados = list(dados_por_ativo.keys())
+    colunas = st.columns(len(ativos_listados)) if len(ativos_listados) <= 4 else st.columns(4)
+    
+    for i, simb in enumerate(ativos_listados):
+        stats = dados_por_ativo[simb]
+        win_rate_asset = (stats['wins'] / stats['total']) * 100 if stats['total'] > 0 else 0.0
+        cor_asset_lucro = "#16a34a" if stats['lucro'] >= 0 else "#ef4444"
+        
+        # Pega a cor oficial da moeda ou usa cinza se não tiver
+        cor_borda = ASSETS_CONFIG.get(simb, {}).get("cor", "gray")
+        icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
+        
+        # Distribui os cards nas colunas disponíveis (loop circular se tiver muitos)
+        col_atual = colunas[i % len(colunas)]
+        
+        with col_atual:
+            st.markdown(f"""
+                <div class="asset-card" style="border-top: 3px solid {cor_borda};">
+                    <div style="font-size: 1.5em; margin-bottom: 5px;">{icone} {simb}</div>
+                    <div style="font-size: 1.8em; font-weight: bold; color: {cor_asset_lucro}; margin-bottom: 5px;">
+                        ${stats['lucro']:,.2f}
+                    </div>
+                    <div style="display: flex; justify-content: space-around; font-size: 0.85em; color: gray; margin-top: 10px;">
+                        <div>
+                            <div style="color: #e2e8f0; font-weight: bold;">{win_rate_asset:.0f}%</div>
+                            <div>Win Rate</div>
+                        </div>
+                        <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
+                        <div>
+                            <div style="color: #e2e8f0; font-weight: bold;">{stats['total']}</div>
+                            <div>Trades</div>
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
 
 st.divider()
