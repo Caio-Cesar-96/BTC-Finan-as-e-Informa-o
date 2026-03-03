@@ -478,15 +478,14 @@ with col_lateral:
 # SEÇÃO FINAL: DNA OPERACIONAL & LABORATÓRIO
 # =========================================================
 
-# ESTILO ATUALIZADO PARA OS MINI-CARDS (Compactos e Elegantes)
+# ESTILO ATUALIZADO PARA OS MINI-CARDS (Números Grandes)
 st.markdown("""
     <style>
     .mini-metric {
-        /* Fundo igual aos cards principais (Degradê Azul Escuro) */
         background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
         border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 8px;
-        padding: 15px 10px; /* Padding reduzido para ficar mais compacto */
+        padding: 20px 10px;
         text-align: center;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
@@ -496,14 +495,13 @@ st.markdown("""
         background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
     }
     .mini-label {
-        font-size: 0.8em;
+        font-size: 0.85em;
         color: #9ca3af;
         text-transform: uppercase;
         letter-spacing: 1px;
-        font-weight: 500;
+        font-weight: 600;
         display: inline-block;
     }
-    /* Estilo para a Interrogação (Tooltip) */
     .help-icon {
         display: inline-block;
         width: 16px;
@@ -535,7 +533,7 @@ st.subheader("🧬 DNA Operacional", help="Painel comportamental que analisa sua
 if not historico_fechado:
     st.info("O perfil comportamental será gerado após o fechamento das primeiras operações com projeção (Alvo/Stop).")
 else:
-    # --- PARTE 1: O GRÁFICO DE ROSCA E BARRAS (MANTIDO IGUAL) ---
+    # --- PARTE 1: O GRÁFICO DE ROSCA E BARRAS ---
     contagem_comportamento = {
         "🏆 Sniper": 0,
         "🥬 Mão de Alface": 0,
@@ -608,38 +606,34 @@ else:
     else:
         st.info("Aguardando dados de operações com alvo e stop para gerar o DNA.")
 
-    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (CARDS REFEITOS COM PREENCHIMENTO) ---
+    # --- PARTE 2: COMPARAÇÃO COMPORTAMENTAL (CARDS GRANDES) ---
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
     st.markdown("#### ⚖️ Comparação Comportamental")
-    # Subtítulo (caption) removido conforme pedido
     
-    # CÁLCULOS COMPARATIVOS
+    # CÁLCULOS
     ops_estruturadas = [o for o in historico_fechado if o.get('teve_projecao')]
     ops_livres = [o for o in historico_fechado if not o.get('teve_projecao')]
     
-    # Métricas Estruturadas
     lucro_est = sum(o['lucro_usdt'] for o in ops_estruturadas)
     wins_est = sum(1 for o in ops_estruturadas if o['lucro_usdt'] > 0)
     total_est = len(ops_estruturadas)
     wr_est = (wins_est / total_est * 100) if total_est > 0 else 0.0
     media_est = (lucro_est / total_est) if total_est > 0 else 0.0
     
-    # Métricas Livres
     lucro_liv = sum(o['lucro_usdt'] for o in ops_livres)
     wins_liv = sum(1 for o in ops_livres if o['lucro_usdt'] > 0)
     total_liv = len(ops_livres)
     wr_liv = (wins_liv / total_liv * 100) if total_liv > 0 else 0.0
     media_liv = (lucro_liv / total_liv) if total_liv > 0 else 0.0
     
-    # CORES
     cor_azul = "#3b82f6"
     cor_amarela = "#F3BA2F"
     
-    # CARDS COMPARATIVOS (PREENCHIDOS + TOOLTIP ELEGANTE + LABELS CLAROS)
     col_c1, col_c2, col_c3 = st.columns(3)
     
+    # CARD 1
     with col_c1:
         st.markdown(f"""
             <div class="mini-metric">
@@ -649,18 +643,19 @@ else:
                 </div>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 1.4em; font-weight: bold;">${lucro_est:.2f}</div>
-                        <div style="font-size: 0.7em; color: {cor_azul}; opacity: 0.8; font-weight: bold; margin-top: 2px;">SNIPER</div>
+                        <div style="color: {cor_azul}; font-size: 2.2em; font-weight: bold; line-height: 1;">${lucro_est:.2f}</div>
+                        <div style="font-size: 0.8em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 5px;">planejado</div>
                     </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 35px;"></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 45px;"></div>
                     <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 1.4em; font-weight: bold;">${lucro_liv:.2f}</div>
-                        <div style="font-size: 0.7em; color: {cor_amarela}; opacity: 0.8; font-weight: bold; margin-top: 2px;">LIVRE</div>
+                        <div style="color: {cor_amarela}; font-size: 2.2em; font-weight: bold; line-height: 1;">${lucro_liv:.2f}</div>
+                        <div style="font-size: 0.8em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 5px;">livre</div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
+    # CARD 2
     with col_c2:
         st.markdown(f"""
             <div class="mini-metric">
@@ -670,18 +665,19 @@ else:
                 </div>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 1.4em; font-weight: bold;">{wr_est:.0f}%</div>
-                        <div style="font-size: 0.7em; color: {cor_azul}; opacity: 0.8; font-weight: bold; margin-top: 2px;">SNIPER</div>
+                        <div style="color: {cor_azul}; font-size: 2.2em; font-weight: bold; line-height: 1;">{wr_est:.0f}%</div>
+                        <div style="font-size: 0.8em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 5px;">planejado</div>
                     </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 35px;"></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 45px;"></div>
                     <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 1.4em; font-weight: bold;">{wr_liv:.0f}%</div>
-                        <div style="font-size: 0.7em; color: {cor_amarela}; opacity: 0.8; font-weight: bold; margin-top: 2px;">LIVRE</div>
+                        <div style="color: {cor_amarela}; font-size: 2.2em; font-weight: bold; line-height: 1;">{wr_liv:.0f}%</div>
+                        <div style="font-size: 0.8em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 5px;">livre</div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
+    # CARD 3
     with col_c3:
         st.markdown(f"""
             <div class="mini-metric">
@@ -691,13 +687,13 @@ else:
                 </div>
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 1.4em; font-weight: bold;">${media_est:.2f}</div>
-                        <div style="font-size: 0.7em; color: {cor_azul}; opacity: 0.8; font-weight: bold; margin-top: 2px;">SNIPER</div>
+                        <div style="color: {cor_azul}; font-size: 2.2em; font-weight: bold; line-height: 1;">${media_est:.2f}</div>
+                        <div style="font-size: 0.8em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 5px;">planejado</div>
                     </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 35px;"></div>
+                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 45px;"></div>
                     <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 1.4em; font-weight: bold;">${media_liv:.2f}</div>
-                        <div style="font-size: 0.7em; color: {cor_amarela}; opacity: 0.8; font-weight: bold; margin-top: 2px;">LIVRE</div>
+                        <div style="color: {cor_amarela}; font-size: 2.2em; font-weight: bold; line-height: 1;">${media_liv:.2f}</div>
+                        <div style="font-size: 0.8em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 5px;">livre</div>
                     </div>
                 </div>
             </div>
@@ -706,7 +702,6 @@ else:
     # GRÁFICO COMPARATIVO DE LINHAS
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Preparar dados para o gráfico
     df_comp = pd.DataFrame(historico_fechado)
     if not df_comp.empty:
         df_comp['Datahora'] = pd.to_datetime(df_comp['data_fechamento'] + ' ' + df_comp['hora_fechamento'])
@@ -734,16 +729,16 @@ else:
             
         fig_comp = go.Figure()
         
-        # Linha Planejada (Azul)
+        # Linha Planejada
         fig_comp.add_trace(go.Scatter(
-            x=x_axis, y=y_est, mode='lines', name='Estratégia Sniper',
+            x=x_axis, y=y_est, mode='lines', name='Com Planejamento',
             line=dict(color=cor_azul, width=2),
-            hovertemplate="Sniper: $%{y:.2f}<extra></extra>"
+            hovertemplate="Planejado: $%{y:.2f}<extra></extra>"
         ))
         
-        # Linha Livre (Amarela)
+        # Linha Livre
         fig_comp.add_trace(go.Scatter(
-            x=x_axis, y=y_liv, mode='lines', name='Trading Livre',
+            x=x_axis, y=y_liv, mode='lines', name='Sem Planejamento',
             line=dict(color=cor_amarela, width=2, dash='dot'), 
             hovertemplate="Livre: $%{y:.2f}<extra></extra>"
         ))
