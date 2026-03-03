@@ -1,144 +1,86 @@
 import streamlit as st
 
-# Configuração da página
-st.set_page_config(page_title="Laboratório UI", page_icon="🧪", layout="wide")
+st.set_page_config(layout="wide")
 
-# ==========================================
-# O "MOTOR" DO VISUAL (NOSSO CSS INJETADO)
-# ==========================================
+# CSS para os cards de teste
 st.markdown("""
     <style>
-    /* 1. BOTÃO NEON / CYBERPUNK */
-    .btn-neon {
-        display: block;
-        background-color: transparent;
-        color: #0ff;
-        border: 2px solid #0ff;
-        padding: 12px 20px;
-        text-transform: uppercase;
-        font-weight: bold;
-        letter-spacing: 2px;
-        border-radius: 5px;
-        box-shadow: 0 0 5px #0ff, inset 0 0 5px #0ff;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    .btn-neon:hover {
-        background-color: #0ff;
-        color: #000;
-        box-shadow: 0 0 10px #0ff, 0 0 30px #0ff;
-    }
-
-    /* 2. BOTÃO WEB3 / CRYPTO (Gradiente) */
-    .btn-crypto {
-        display: block;
-        background: linear-gradient(45deg, #8b5cf6, #d946ef);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 8px;
-        border: none;
-        font-weight: bold;
-        font-size: 16px;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(217, 70, 239, 0.4);
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .btn-crypto:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(217, 70, 239, 0.6);
-    }
-
-    /* 3. BOTÃO INSTITUCIONAL / WALL STREET */
-    .btn-wallstreet {
-        display: block;
-        background-color: #0f172a;
-        color: #94a3b8;
-        border: 1px solid #334155;
-        padding: 12px 20px;
-        border-radius: 3px;
-        font-family: monospace;
-        font-size: 14px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .btn-wallstreet:hover {
-        background-color: #f8fafc;
-        color: #0f172a;
-        border-color: #f8fafc;
-    }
-
-    /* 4. EFEITO VIDRO (Glassmorphism) */
-    .btn-glass {
-        display: block;
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 12px;
-        text-align: center;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    .btn-glass:hover {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    /* UM CARD DE INFORMAÇÃO ELEGANTE */
-    .card-pro {
-        background: linear-gradient(145deg, #1e293b, #0f172a);
-        border-left: 4px solid #F3BA2F;
+    .test-container {
+        display: flex;
+        gap: 20px;
         padding: 20px;
-        border-radius: 8px;
-        color: #cbd5e1;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        margin-top: 20px;
     }
+    .test-card {
+        background: linear-gradient(145deg, #1e293b, #0f172a);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        width: 250px;
+        transition: 0.3s;
+    }
+    .test-card:hover {
+        transform: translateY(-5px);
+        border-color: #F3BA2F;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    }
+    .img-box {
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: center;
+    }
+    .img-box img {
+        width: 50px;
+        height: 50px;
+        filter: drop-shadow(0 0 8px rgba(243, 186, 47, 0.3));
+    }
+    .label { color: #9ca3af; font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; }
+    .value { color: white; font-size: 1.4em; font-weight: bold; margin-top: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# A INTERFACE DO LABORATÓRIO
-# ==========================================
-st.title("🧪 Laboratório de Interface (UI/UX)")
-st.write("Aqui estão as principais vertentes de design que podemos aplicar no nosso sistema com HTML e CSS.")
-st.divider()
+# 1. BASE64 - LOGO BITCOIN (Colorida Oficial)
+logo_btc = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMiIgZmlsbD0iI0Y3OTMxQSIvPjxwYXRoIGQ9Ik00NCAzOS40Yy0uOCA0LjItNC4xIDcuMi04LjYgNy4yaC03LjR2LTkuM2gzLjdjMi4xIDAgMy44IDEuNyAzLjggMy44LjEgMi4yIDEuOCAzLjkgNCAzLjl6IiBmaWxsPSJ3aGl0ZSIvPjxwYXRoIGQ9Ik0yOCAyNGgtNC40di00LjNoNC40djQuM3ptMCAyMi42aC00LjR2LTQuM2g0LjR2NC4zem0xMi40LTE1LjljLS42LTMuMy0zLTYtNi4yLTYuMmgtNi4ydi00LjNoLTR2NC4zaC0yLjR2NGgyLjR2MTQuN2gtMi40djRoMi40djQuM2g0di00LjNoNy44YzQuOSAwIDkuMS0zLjUgOS45LTguMy40LTIuMy0uMS00LjYtMS4zLTYuNXoiIGZpbGw9IndoaGl0ZSIvPjwvc3ZnPg=="
 
-col1, col2, col3, col4 = st.columns(4)
+# 2. BASE64 - ÍCONE CALCULADORA (Dourado Custom)
+icon_calc = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjRjNCQTJGIiBzdHJva2Utd2lkdGg9IjEuNSI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNMTUgNmgzYTIgMiAwIDAxMiAydjExYTIgMiAwIDAxLTIgMkg2YTIgMiAwIDAxLTItMlY4YTIgMiAwIDAxMi0yaDNtNC0zdi00bS03IDR2LTRtLTQgMTBoMTJtLTkgNGgybTMtNGgybS04LTRoMm0zLTRoMiIgLz48L3N2Zz4="
 
-with col1:
-    st.subheader("1. Cyberpunk")
-    st.markdown('<div class="btn-neon">Comprar BTC</div>', unsafe_allow_html=True)
+# 3. BASE64 - ÍCONE PORTFOLIO/MALETA (Minimalista)
+icon_briefcase = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjRjNCQTJGIiBzdHJva2Utd2lkdGg9IjEuNSI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNMjEgOGgtMXYxMWExIDIgMCAwMS0yIDJINmExIDIgMCAwMS0yLTJWOGgtMVY3YTIgMiAwIDAxMi0yaDRWNGExIDIgMCAwMTEtMWg0YTEgMiAwIDAxMSAxdjFoNFY3YTIgMiAwIDAxMiAyVjh6bS05IDV2NG0tMy00aDZtLTYtOWg0djFIOXYtMXoiIC8+PC9zdmc+"
 
-with col2:
-    st.subheader("2. Web3 Crypto")
-    st.markdown('<div class="btn-crypto">Stake Agora</div>', unsafe_allow_html=True)
+st.title("🧪 Laboratório de Estilização Base64")
+st.write("Veja como os ícones vetoriais elevam o visual comparado aos emojis.")
 
-with col3:
-    st.subheader("3. Wall Street")
-    st.markdown('<div class="btn-wallstreet">EXEC_ORDER()</div>', unsafe_allow_html=True)
+c1, c2, c3 = st.columns(3)
 
-with col4:
-    st.subheader("4. Glass Apple")
-    st.markdown('<div class="btn-glass">Ver Portfólio</div>', unsafe_allow_html=True)
+with c1:
+    st.markdown(f"""
+        <div class="test-card">
+            <div class="img-box"><img src="{logo_btc}"></div>
+            <div class="label">Ativo de Destaque</div>
+            <div class="value">Bitcoin</div>
+            <div style="color: #22c55e; font-size: 0.8em; margin-top: 10px;">Identidade Oficial</div>
+        </div>
+    """, unsafe_allow_html=True)
 
+with c2:
+    st.markdown(f"""
+        <div class="test-card" style="border-top: 3px solid #F3BA2F;">
+            <div class="img-box"><img src="{icon_calc}"></div>
+            <div class="label">Ferramenta</div>
+            <div class="value">Calculadora</div>
+            <div style="color: #F3BA2F; font-size: 0.8em; margin-top: 10px;">SVG Dourado Custom</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-st.divider()
-st.subheader("📊 Painéis e Cards em HTML")
-st.write("Além dos botões, o HTML brilha mesmo é na hora de mostrar dados em formato de 'Dashboards', como fizemos na calculadora. Olha o nível de profissionalismo de um Card Avançado:")
+with c3:
+    st.markdown(f"""
+        <div class="test-card">
+            <div class="img-box"><img src="{icon_briefcase}"></div>
+            <div class="label">Gestão</div>
+            <div class="value">Portfólio</div>
+            <div style="color: #9ca3af; font-size: 0.8em; margin-top: 10px;">Traços Finos (Lineal)</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-st.markdown("""
-    <div class="card-pro">
-        <span style="color: #9ca3af; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Desempenho Geral do Portfólio</span><br>
-        <span style="font-size: 2.5em; font-weight: bold; color: white;">&#36;14,250.80</span>
-        <span style="color: #16a34a; font-size: 1.2em; font-weight: bold; margin-left: 10px;">+&#36;1,250.00 (+8.5%)</span>
-        <hr style="border: 0; height: 1px; background: rgba(255,255,255,0.1); margin: 15px 0;">
-        <span style="font-size: 0.9em; color: #cbd5e1;">🟢 Bitcoin (BTC) puxou a alta hoje. Última atualização: 2 min atrás.</span>
-    </div>
-""", unsafe_allow_html=True)#Em brave
+st.info("💡 Observe como os ícones dourados (Calculadora e Maleta) têm a cor exata do seu layout, algo impossível de fazer com emojis padrão.")
