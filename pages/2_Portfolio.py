@@ -5,13 +5,18 @@ import pandas as pd
 import plotly.graph_objects as go
 from supabase import create_client, Client
 
+# ==============================================================================
+# BLOCO 1: CONFIGURAÇÃO DA PÁGINA E SEGURANÇA
+# ==============================================================================
 st.set_page_config(page_title="Portfólio - O Conselho", page_icon="💼", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CADEADO DE SEGURANÇA ---
+# Cadeado de Segurança
 if not st.session_state.get("autenticado", False):
     st.switch_page("main.py")
 
-# --- CONEXÃO COM O BANCO DE DADOS (SUPABASE) ---
+# ==============================================================================
+# BLOCO 2: CONEXÃO COM BANCO DE DADOS
+# ==============================================================================
 @st.cache_resource
 def iniciar_conexao():
     url = st.secrets["SUPABASE_URL"]
@@ -24,7 +29,7 @@ except Exception as e:
     st.error("⚠️ Erro ao conectar com o Banco de Dados. Verifique os Secrets.")
     st.stop()
 
-# --- CONFIGURAÇÃO DE ATIVOS (CORES E ÍCONES) ---
+# Configuração de Ativos (Cores e Ícones)
 ASSETS_CONFIG = {
     "BTC": {"nome": "Bitcoin", "icon": "🟠", "cor": "#F3BA2F"},
     "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
@@ -33,13 +38,16 @@ ASSETS_CONFIG = {
     "PAXG": {"nome": "PAX Gold", "icon": "🏆", "cor": "#D4AF37"}
 }
 
-# --- CSS INSTITUCIONAL E CARDS ---
+# ==============================================================================
+# BLOCO 3: ESTILIZAÇÃO (CSS)
+# ==============================================================================
 st.markdown("""
     <style>
-        /* MATAR A BARRA LATERAL PADRÃO */
+        /* Remove elementos padrões do Streamlit */
         [data-testid="collapsedControl"] {display: none !important;}
         [data-testid="stSidebar"] {display: none !important;}
         
+        /* Botões de Navegação */
         [data-testid="stPageLink-NavLink"] {
             width: 100%;
             padding: 5px 15px;
@@ -49,6 +57,7 @@ st.markdown("""
             text-align: center;
         }
         
+        /* CARDS DO TOPO (Métricas Gerais) */
         .metric-card {
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -65,7 +74,6 @@ st.markdown("""
             transform: translateY(-3px);
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
         }
-        
         .card-capital { border-top: 3px solid #F3BA2F; }
         .card-pnl { border-top: 3px solid #3b82f6; }
         .card-realizado { border-top: 3px solid #10b981; }
@@ -92,7 +100,31 @@ st.markdown("""
         .text-gray { color: #6b7280; }
         .text-gold { color: #F3BA2F; }
         
-        /* CSS PARA OS CARDS WIDE DO COFRE */
+        /* CARDS PEQUENOS (Mini Metrics) */
+        .mini-metric {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px 5px;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .mini-metric:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
+        }
+        .mini-label {
+            font-size: 0.8em;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        /* CARDS LARGOS DO COFRE (Asset Rows) */
         .asset-row {
             background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8)) !important;
             border: 1px solid rgba(255, 255, 255, 0.05) !important;
@@ -116,15 +148,9 @@ st.markdown("""
             gap: 15px !important;
             width: 20% !important;
         }
-        .asset-icon-large {
-            font-size: 2em !important;
-        }
-        .asset-name-large {
-            font-size: 1.2em !important;
-            font-weight: bold !important;
-            color: white !important;
-            letter-spacing: 1px !important;
-        }
+        .asset-icon-large { font-size: 2em !important; }
+        .asset-name-large { font-size: 1.2em !important; font-weight: bold !important; color: white !important; letter-spacing: 1px !important; }
+        
         .asset-stats-container {
             display: flex !important;
             justify-content: space-between !important;
@@ -132,59 +158,24 @@ st.markdown("""
             align-items: center !important;
             margin-left: 20px !important;
         }
-        .asset-stat-box {
-            text-align: center !important;
-            min-width: 80px !important;
-        }
-        .asset-label {
-            font-size: 0.7em !important;
-            color: #9ca3af !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
-            margin-bottom: 4px !important;
-            font-family: sans-serif !important;
-        }
-        .asset-value {
-            font-size: 1.1em !important;
-            font-weight: bold !important;
-            font-family: sans-serif !important;
-        }
+        .asset-stat-box { text-align: center !important; min-width: 80px !important; }
+        .asset-label { font-size: 0.7em !important; color: #9ca3af !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; margin-bottom: 4px !important; font-family: sans-serif !important; }
+        .asset-value { font-size: 1.1em !important; font-weight: bold !important; font-family: sans-serif !important; }
+        
         .vertical-divider {
             width: 1px !important;
             height: 30px !important;
             background-color: rgba(255, 255, 255, 0.1) !important;
         }
-        
-        .mini-metric {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding: 15px 5px;
-            text-align: center;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .mini-metric:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
-        }
-        .mini-label {
-            font-size: 0.8em;
-            color: #9ca3af;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            display: block;
-        }
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÕES DE API INTELIGENTE (MULTI-MOEDA) ---
+# ==============================================================================
+# BLOCO 4: FUNÇÕES AUXILIARES (API & DADOS)
+# ==============================================================================
 def obter_dicionario_precos(lista_simbolos):
     precos = {}
-    if not lista_simbolos:
-        return precos
+    if not lista_simbolos: return precos
     lista_limpa = list(set([s for s in lista_simbolos if s]))
     for simb in lista_limpa:
         try:
@@ -203,15 +194,11 @@ def carregar_dados_nuvem():
     try:
         user_id = st.session_state.get("user_id")
         resposta = supabase.table("operacoes").select("*").eq("user_id", user_id).execute()
-        
         dados = resposta.data
         dados_ordenados = sorted(dados, key=lambda x: x['id'])
-        
         for indice, d in enumerate(dados_ordenados):
             d['display_id'] = f"{(indice + 1):03d}"
-            if 'simbolo' not in d or not d['simbolo']:
-                d['simbolo'] = 'BTC'
-            
+            if 'simbolo' not in d or not d['simbolo']: d['simbolo'] = 'BTC'
         abertas = [d for d in dados_ordenados if d['status'] == 'Aberto']
         fechadas = [d for d in dados_ordenados if d['status'] == 'Fechado']
         return abertas, fechadas
@@ -219,9 +206,10 @@ def carregar_dados_nuvem():
         st.error(f"Erro ao baixar dados: {e}")
         return [], []
 
-# --- CABEÇALHO E NAVEGAÇÃO ---
+# ==============================================================================
+# BLOCO 5: EXECUÇÃO PRINCIPAL & MENU
+# ==============================================================================
 col_titulo, col_btn_home, col_btn_calc = st.columns([6, 2, 2], vertical_alignment="center")
-
 with col_titulo:
     st.title("💼 Cockpit de Performance")
 with col_btn_home:
@@ -231,16 +219,15 @@ with col_btn_calc:
 
 st.divider()
 
-# --- VERIFICAÇÃO DE MEMÓRIA BLINDADA ---
 if 'dados_sincronizados' not in st.session_state:
-    with st.spinner("Sincronizando Portfólio com o Banco de Dados..."):
+    with st.spinner("Sincronizando Portfólio..."):
         abertas, fechadas = carregar_dados_nuvem()
         st.session_state['ordens_abertas'] = abertas
         st.session_state['historico_fechado'] = fechadas
         st.session_state['dados_sincronizados'] = True
 
-# Recarregando via botão oculto
-col_refresh, col_vazia = st.columns([1, 9])
+# Botão Invisível de Refresh (para debug)
+col_refresh, _ = st.columns([1, 9])
 with col_refresh:
     if st.button("🔄 Atualizar Dados"):
         abertas, fechadas = carregar_dados_nuvem()
@@ -251,7 +238,9 @@ with col_refresh:
 ordens_abertas = st.session_state.get('ordens_abertas', [])
 historico_fechado = st.session_state.get('historico_fechado', [])
 
-# --- CÁLCULOS DO MOTOR PYTHON (MULTI-MOEDA) ---
+# ==============================================================================
+# BLOCO 6: MOTOR DE CÁLCULO (MATEMÁTICA)
+# ==============================================================================
 simbolos_em_aberto = list(set([o['simbolo'] for o in ordens_abertas]))
 cotacoes_atuais = obter_dicionario_precos(simbolos_em_aberto)
 
@@ -265,13 +254,7 @@ for o in ordens_abertas:
     valor_mercado_atual_total += qtd * preco_atual
 
 pnl_flutuante = valor_mercado_atual_total - total_investido_aberto
-
-pnl_flutuante_pct = 0.0
-if total_investido_aberto > 0:
-    pnl_flutuante_pct = (pnl_flutuante / total_investido_aberto) * 100
-
-cor_flutuante = "text-green" if pnl_flutuante >= 0 else "text-red"
-sinal_flutuante = "+" if pnl_flutuante >= 0 else "-"
+pnl_flutuante_pct = (pnl_flutuante / total_investido_aberto * 100) if total_investido_aberto > 0 else 0.0
 
 lucro_realizado_total = sum(float(o.get('lucro_usdt', 0)) for o in historico_fechado)
 total_taxas_pagas = sum(float(o.get('total_taxas_usdt', 0)) for o in historico_fechado) + sum(float(o.get('taxa_entrada_usdt', 0)) for o in ordens_abertas)
@@ -280,12 +263,7 @@ ordens_vencedoras = sum(1 for o in historico_fechado if float(o.get('lucro_usdt'
 total_ordens_fechadas = len(historico_fechado)
 win_rate = (ordens_vencedoras / total_ordens_fechadas * 100) if total_ordens_fechadas > 0 else 0.0
 
-cor_realizado = "text-green" if lucro_realizado_total >= 0 else "text-red"
-sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
-
-cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
-
-# --- CÁLCULOS AVANÇADOS (RETORNO MÉDIO, STREAK) ---
+# Cálculos de Streak e Médias
 media_gain = 0.0
 media_loss = 0.0
 streak_count = 0
@@ -295,87 +273,62 @@ icone_streak = "➖"
 if historico_fechado:
     gains = [float(o['lucro_usdt']) for o in historico_fechado if float(o.get('lucro_usdt', 0)) > 0]
     losses = [float(o['lucro_usdt']) for o in historico_fechado if float(o.get('lucro_usdt', 0)) < 0]
-    
     if gains: media_gain = sum(gains) / len(gains)
     if losses: media_loss = sum(losses) / len(losses)
-        
+    
     historico_cronologico = sorted(historico_fechado, key=lambda x: f"{x['data_fechamento']} {x['hora_fechamento']}")
     ordens_reversas = list(reversed(historico_cronologico))
-    
     ultimo_resultado_positivo = float(ordens_reversas[0].get('lucro_usdt', 0)) > 0
     streak_tipo = "Lucro" if ultimo_resultado_positivo else "Prejuízo"
     icone_streak = "🔥" if ultimo_resultado_positivo else "🧊"
-    
     for o in ordens_reversas:
         l_usdt = float(o.get('lucro_usdt', 0))
         if (l_usdt > 0 and ultimo_resultado_positivo) or (l_usdt < 0 and not ultimo_resultado_positivo):
             streak_count += 1
-        elif l_usdt == 0:
-            continue
-        else:
-            break
+        elif l_usdt == 0: continue
+        else: break
 
-# --- TEMPO MÉDIO ---
+# Tempo Médio
 tempos_operacao = []
+tempo_medio_str = "0m"
 for o in historico_fechado:
     try:
         dt_abertura = datetime.datetime.strptime(f"{o['data_abertura']} {o['hora_abertura']}", "%Y-%m-%d %H:%M")
         dt_fechamento = datetime.datetime.strptime(f"{o['data_fechamento']} {o['hora_fechamento']}", "%Y-%m-%d %H:%M")
         tempos_operacao.append((dt_fechamento - dt_abertura).total_seconds())
-    except:
-        pass
-
-tempo_medio_str = "0m"
+    except: pass
 if tempos_operacao:
     media_seg = sum(tempos_operacao) / len(tempos_operacao)
     horas = int(media_seg // 3600)
     minutos = int((media_seg % 3600) // 60)
     tempo_medio_str = f"{horas}h {minutos}m" if horas > 0 else f"{minutos}m"
 
-# --- DESENHO DOS CARDS SUPERIORES ---
+# ==============================================================================
+# BLOCO 7: VISUALIZAÇÃO - CARDS TOPO
+# ==============================================================================
 st.subheader("Visão Geral do Portfólio")
-
 col1, col2, col3, col4 = st.columns(4)
 
+cor_flutuante = "text-green" if pnl_flutuante >= 0 else "text-red"
+sinal_flutuante = "+" if pnl_flutuante >= 0 else "-"
+cor_realizado = "text-green" if lucro_realizado_total >= 0 else "text-red"
+sinal_realizado = "+" if lucro_realizado_total >= 0 else "-"
+cor_winrate = "text-green" if win_rate >= 50 else ("text-red" if total_ordens_fechadas > 0 else "text-gray")
+
 with col1:
-    st.markdown(f"""
-        <div class="metric-card card-capital">
-            <div class="metric-title">Capital Alocado (Risco)</div>
-            <div class="metric-value">&#36;{total_investido_aberto:,.2f}</div>
-            <div class="metric-sub text-gold">Multi-Ativos</div>
-        </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f"""<div class="metric-card card-capital"><div class="metric-title">Capital Alocado (Risco)</div><div class="metric-value">&#36;{total_investido_aberto:,.2f}</div><div class="metric-sub text-gold">Multi-Ativos</div></div>""", unsafe_allow_html=True)
 with col2:
-    st.markdown(f"""
-        <div class="metric-card card-pnl">
-            <div class="metric-title">PnL Flutuante (Abertas)</div>
-            <div class="metric-value {cor_flutuante}">{sinal_flutuante}&#36;{abs(pnl_flutuante):,.2f}</div>
-            <div class="metric-sub {cor_flutuante}">{sinal_flutuante}{abs(pnl_flutuante_pct):,.2f}% sobre o investido</div>
-        </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f"""<div class="metric-card card-pnl"><div class="metric-title">PnL Flutuante (Abertas)</div><div class="metric-value {cor_flutuante}">{sinal_flutuante}&#36;{abs(pnl_flutuante):,.2f}</div><div class="metric-sub {cor_flutuante}">{sinal_flutuante}{abs(pnl_flutuante_pct):,.2f}% sobre o investido</div></div>""", unsafe_allow_html=True)
 with col3:
-    st.markdown(f"""
-        <div class="metric-card card-realizado">
-            <div class="metric-title">Lucro Líquido Realizado</div>
-            <div class="metric-value {cor_realizado}">{sinal_realizado}&#36;{abs(lucro_realizado_total):,.2f}</div>
-            <div class="metric-sub text-gray">De {total_ordens_fechadas} ordens fechadas</div>
-        </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f"""<div class="metric-card card-realizado"><div class="metric-title">Lucro Líquido Realizado</div><div class="metric-value {cor_realizado}">{sinal_realizado}&#36;{abs(lucro_realizado_total):,.2f}</div><div class="metric-sub text-gray">De {total_ordens_fechadas} ordens fechadas</div></div>""", unsafe_allow_html=True)
 with col4:
-    st.markdown(f"""
-        <div class="metric-card card-winrate">
-            <div class="metric-title">Taxa de Acerto</div>
-            <div class="metric-value {cor_winrate}">{win_rate:.1f}%</div>
-            <div class="metric-sub text-gray">Ordens Positivas: {ordens_vencedoras}</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card card-winrate"><div class="metric-title">Taxa de Acerto</div><div class="metric-value {cor_winrate}">{win_rate:.1f}%</div><div class="metric-sub text-gray">Ordens Positivas: {ordens_vencedoras}</div></div>""", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- LAYOUT DIVIDIDO NO MEIO (50/50) ---
+# ==============================================================================
+# BLOCO 8: VISUALIZAÇÃO - LISTAS E TABELAS
+# ==============================================================================
 col_tabelas, col_lateral = st.columns([1.1, 0.9], gap="large")
 
 with col_tabelas:
@@ -384,10 +337,8 @@ with col_tabelas:
 
     def pintar_tabela(val):
         if isinstance(val, (int, float)):
-            if val > 0:
-                return 'color: #16a34a; font-weight: bold;'
-            elif val < 0:
-                return 'color: #dc2626; font-weight: bold;'
+            if val > 0: return 'color: #16a34a; font-weight: bold;'
+            elif val < 0: return 'color: #dc2626; font-weight: bold;'
         return 'color: gray;'
 
     with aba_abertas:
@@ -398,13 +349,10 @@ with col_tabelas:
             for o in ordens_abertas:
                 simb = o.get('simbolo', 'BTC')
                 preco_atual_ativo = cotacoes_atuais.get(simb, 0.0)
-                
                 valor_atual_ordem = float(o['quantidade_btc']) * preco_atual_ativo
                 pnl_dolar = valor_atual_ordem - float(o['valor_investido_usdt'])
                 pnl_pct = (pnl_dolar / float(o['valor_investido_usdt'])) * 100
-                
                 icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
-                
                 dados_abertas.append({
                     'Ativo': f"{icone} {simb}",
                     'Investido': float(o['valor_investido_usdt']),
@@ -413,17 +361,8 @@ with col_tabelas:
                     'Rentabilidade (%)': pnl_pct,
                     'ID': f"#{o.get('display_id', '???')}"
                 })
-                
             df_abertas = pd.DataFrame(dados_abertas)
-            
-            estilo_abertas = df_abertas.style.map(pintar_tabela, subset=['PnL Atual ($)', 'Rentabilidade (%)']).format({
-                'Investido': '${:,.2f}',
-                'Volume': '{:.6f}',
-                'PnL Atual ($)': '${:,.2f}',
-                'Rentabilidade (%)': '{:+.2f}%'
-            })
-            
-            st.dataframe(estilo_abertas, use_container_width=True, hide_index=True)
+            st.dataframe(df_abertas.style.map(pintar_tabela, subset=['PnL Atual ($)', 'Rentabilidade (%)']).format({'Investido': '${:,.2f}','Volume': '{:.6f}','PnL Atual ($)': '${:,.2f}','Rentabilidade (%)': '{:+.2f}%'}), use_container_width=True, hide_index=True)
 
     with aba_fechadas:
         if not historico_fechado:
@@ -431,44 +370,27 @@ with col_tabelas:
         else:
             dados_fechadas = []
             for o in historico_fechado:
-                comportamento = o.get('comportamento_final')
-                if not comportamento:
-                    comportamento = "---"
-                
                 simb = o.get('simbolo', 'BTC')
                 icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
-                    
                 dados_fechadas.append({
                     'Ativo': f"{icone} {simb}",
                     'Retorno Final': float(o.get('valor_recebido_usdt', 0)),
                     'Lucro Líquido ($)': float(o.get('lucro_usdt', 0)),
                     'Rentabilidade (%)': float(o.get('lucro_pct', 0)),
-                    'Disciplina': comportamento,
+                    'Disciplina': o.get('comportamento_final', "---"),
                     'ID': f"#{o.get('display_id', '???')}"
                 })
-                
             df_fechadas = pd.DataFrame(dados_fechadas)
-            
-            estilo_fechadas = df_fechadas.style.map(pintar_tabela, subset=['Lucro Líquido ($)', 'Rentabilidade (%)']).format({
-                'Retorno Final': '${:,.2f}',
-                'Lucro Líquido ($)': '${:,.2f}',
-                'Rentabilidade (%)': '{:+.2f}%'
-            })
-
-            st.dataframe(estilo_fechadas, use_container_width=True, hide_index=True)
+            st.dataframe(df_fechadas.style.map(pintar_tabela, subset=['Lucro Líquido ($)', 'Rentabilidade (%)']).format({'Retorno Final': '${:,.2f}','Lucro Líquido ($)': '${:,.2f}','Rentabilidade (%)': '{:+.2f}%'}), use_container_width=True, hide_index=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    st.markdown(f"""
-        <div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em;">
-            <span style="color: #9ca3af;">Custo Operacional Acumulado:</span> 
-            <strong style="color: #e2e8f0; margin-left: 5px;">&#36;{total_taxas_pagas:.4f}</strong>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div style="background-color: rgba(59, 130, 246, 0.05); border: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 6px; display: inline-block; font-size: 0.85em;"><span style="color: #9ca3af;">Custo Operacional Acumulado:</span> <strong style="color: #e2e8f0; margin-left: 5px;">&#36;{total_taxas_pagas:.4f}</strong></div>""", unsafe_allow_html=True)
 
+# ==============================================================================
+# BLOCO 9: VISUALIZAÇÃO - ANÁLISE LATERAL E GRÁFICOS
+# ==============================================================================
 with col_lateral:
     st.subheader("📊 Raio-X de Performance")
-    
     loss_rate = 100.0 - win_rate if total_ordens_fechadas > 0 else 0.0
     
     st.markdown(f"""
@@ -485,41 +407,16 @@ with col_lateral:
     """, unsafe_allow_html=True)
 
     col_payoff, col_streak, col_tempo = st.columns(3)
+    cor_streak = "#22c55e" if streak_tipo == "Lucro" else "#ef4444" if streak_tipo == "Prejuízo" else "gray"
     
     with col_payoff:
-        st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
-                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Média (L/P)</div>
-                <div style="font-size: 1.1em; font-weight: bold;">
-                    <span style="color: #22c55e;">+${media_gain:.2f}</span>
-                    <span style="color: rgba(255,255,255,0.2); margin: 0 2px;">|</span>
-                    <span style="color: #ef4444;">-${abs(media_loss):.2f}</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    
+        st.markdown(f"""<div class="mini-metric"><div class="mini-label">Média (L/P)</div><div style="font-size: 1.1em; font-weight: bold;"><span style="color: #22c55e;">+${media_gain:.2f}</span> <span style="color: rgba(255,255,255,0.2);">|</span> <span style="color: #ef4444;">-${abs(media_loss):.2f}</span></div></div>""", unsafe_allow_html=True)
     with col_streak:
-        cor_streak = "#22c55e" if streak_tipo == "Lucro" else "#ef4444" if streak_tipo == "Prejuízo" else "gray"
-        st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
-                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Sequência</div>
-                <div style="font-size: 1.2em; font-weight: bold; color: {cor_streak};">
-                    {icone_streak} {streak_count} {streak_tipo}s
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
+        st.markdown(f"""<div class="mini-metric"><div class="mini-label">Sequência</div><div style="font-size: 1.2em; font-weight: bold; color: {cor_streak};">{icone_streak} {streak_count} {streak_tipo}s</div></div>""", unsafe_allow_html=True)
     with col_tempo:
-        st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px 5px; border-radius: 6px; text-align: center; margin-bottom: 20px; height: 100%;">
-                <div style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">Tempo Médio</div>
-                <div style="font-size: 1.2em; font-weight: bold; color: white;">
-                    ⏱️ {tempo_medio_str}
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div class="mini-metric"><div class="mini-label">Tempo Médio</div><div style="font-size: 1.2em; font-weight: bold; color: white;">⏱️ {tempo_medio_str}</div></div>""", unsafe_allow_html=True)
 
-    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size: 0.9em; color: #9ca3af; margin-bottom: 10px; margin-top: 15px;'>Curva de Capital (Acumulado)</div>", unsafe_allow_html=True)
     if not historico_fechado:
         st.info("O gráfico aparecerá após sua primeira venda.")
     else:
@@ -527,486 +424,174 @@ with col_lateral:
         df_hist['Datahora'] = pd.to_datetime(df_hist['data_fechamento'] + ' ' + df_hist['hora_fechamento'])
         df_hist = df_hist.sort_values('Datahora').reset_index(drop=True)
         
-        eixo_x = []
-        eixo_y = []
-        labels_x = []
-        
         lucro_acumulado = 0.0
+        eixo_x, eixo_y, labels_x = [], [], []
         for i, row in df_hist.iterrows():
             lucro_acumulado += float(row.get('lucro_usdt', 0))
             eixo_x.append(i + 1)
             eixo_y.append(lucro_acumulado)
             labels_x.append(f"#{row.get('display_id', '???')}")
             
-        cor_grafico = "#22c55e" if eixo_y[-1] >= 0 else "#ef4444"
-        cor_fundo = "rgba(34, 197, 94, 0.1)" if eixo_y[-1] >= 0 else "rgba(239, 68, 68, 0.1)"
+        cor_grafico = "#22c55e" if eixo_y and eixo_y[-1] >= 0 else "#ef4444"
+        cor_fundo = "rgba(34, 197, 94, 0.1)" if eixo_y and eixo_y[-1] >= 0 else "rgba(239, 68, 68, 0.1)"
         
         fig = go.Figure()
-        
-        fig.add_trace(go.Scatter(
-            x=eixo_x,
-            y=eixo_y,
-            mode='lines+markers',
-            name='Lucro Acum.',
-            line=dict(color=cor_grafico, width=3, shape='spline'),
-            marker=dict(size=8, color=cor_grafico, line=dict(color='white', width=1)),
-            fill='tozeroy',
-            fillcolor=cor_fundo,
-            customdata=labels_x,
-            hovertemplate="<b>Ordem %{customdata}</b><br>Acumulado: $%{y:.2f}<extra></extra>"
-        ))
-        
-        fig.update_layout(
-            height=320,
-            margin=dict(l=0, r=0, t=30, b=0),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(
-                title=dict(text="Sequência de Fechamento", font=dict(size=12, color="#9ca3af")),
-                showgrid=False,
-                zeroline=False,
-                tickmode='linear',
-                tick0=1,
-                dtick=1,
-                color="#9ca3af",
-                tickfont=dict(size=11)
-            ),
-            yaxis=dict(
-                title=dict(text="Lucro Acumulado ($)", font=dict(size=12, color="#9ca3af")),
-                showgrid=True,
-                gridcolor="rgba(255,255,255,0.05)",
-                zeroline=True,
-                zerolinecolor="rgba(255,255,255,0.2)",
-                zerolinewidth=1.5,
-                color="#9ca3af",
-                tickprefix="$",
-                tickfont=dict(size=11)
-            ),
-            hovermode="x unified",
-            hoverlabel=dict(
-                bgcolor="rgba(30, 41, 59, 0.95)",
-                font_size=12,
-                font_family="sans-serif"
-            )
-        )
-        
+        fig.add_trace(go.Scatter(x=eixo_x, y=eixo_y, mode='lines+markers', name='Lucro Acum.', line=dict(color=cor_grafico, width=3, shape='spline'), marker=dict(size=8, color=cor_grafico, line=dict(color='white', width=1)), fill='tozeroy', fillcolor=cor_fundo, customdata=labels_x, hovertemplate="<b>Ordem %{customdata}</b><br>Acumulado: $%{y:.2f}<extra></extra>"))
+        fig.update_layout(height=320, margin=dict(l=0, r=0, t=30, b=0), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False, zeroline=False, showticklabels=False), yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=True, zerolinecolor="rgba(255,255,255,0.2)"), hovermode="x unified", hoverlabel=dict(bgcolor="rgba(30, 41, 59, 0.95)"))
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
+# DNA Operacional
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown("""
-    <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
-""", unsafe_allow_html=True)
+st.markdown("""<div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>""", unsafe_allow_html=True)
+st.subheader("🧬 DNA Operacional", help="Análise de disciplina.")
 
-st.subheader("🧬 DNA Operacional", help="Painel comportamental que analisa sua disciplina com base em metas predefinidas de Alvo e Stop.")
+contagem = {"🏆 Sniper": 0, "🥬 Mão de Alface": 0, "🛡️ Saída Estratégica": 0, "🛑 Resiliência": 0, "💥 Descontrole": 0}
+total_dna = 0
+for o in historico_fechado:
+    c = o.get('comportamento_final')
+    if c in contagem: 
+        contagem[c] += 1
+        total_dna += 1
 
-if not historico_fechado:
-    st.info("O perfil comportamental será gerado após o fechamento das primeiras operações com projeção (Alvo/Stop).")
+if total_dna > 0:
+    dados_grafico = {k: v for k, v in contagem.items() if v > 0}
+    c_dna1, c_dna2 = st.columns([1, 2], gap="large")
+    cores_map = {"🏆 Sniper": "#10b981", "🥬 Mão de Alface": "#F3BA2F", "🛡️ Saída Estratégica": "#64748b", "🛑 Resiliência": "#f97316", "💥 Descontrole": "#ef4444"}
+    
+    with c_dna1:
+        labels = list(dados_grafico.keys())
+        colors = [cores_map.get(l, "gray") for l in labels]
+        fig_dna = go.Figure(data=[go.Pie(labels=labels, values=list(dados_grafico.values()), hole=.6, marker=dict(colors=colors, line=dict(color='#0f172a', width=3)), textinfo='percent', textposition='outside', showlegend=False)])
+        fig_dna.update_layout(margin=dict(l=10, r=10, t=10, b=50), height=250, paper_bgcolor='rgba(0,0,0,0)', annotations=[dict(text=f"{total_dna}", x=0.5, y=0.5, font_size=20, showarrow=False, font_color="white")])
+        st.plotly_chart(fig_dna, use_container_width=True)
+    with c_dna2:
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        for item, qtd in dados_grafico.items():
+            pct = (qtd / total_dna) * 100
+            cor = cores_map.get(item, "gray")
+            st.markdown(f"""<div style="margin-bottom: 12px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="color: #e2e8f0; font-size: 0.9em; font-weight: 500;">{item}</span></div><div style="width: 100%; background-color: rgba(255,255,255,0.05); height: 8px; border-radius: 4px;"><div style="width: {pct}%; background-color: {cor}; height: 100%; border-radius: 4px;"></div></div></div>""", unsafe_allow_html=True)
 else:
-    contagem_comportamento = {
-        "🏆 Sniper": 0,
-        "🥬 Mão de Alface": 0,
-        "🛡️ Saída Estratégica": 0,
-        "🛑 Resiliência": 0,
-        "💥 Descontrole": 0
-    }
-    
-    total_validos = 0
-    for o in historico_fechado:
-        comp = o.get('comportamento_final')
-        if comp and comp in contagem_comportamento:
-            contagem_comportamento[comp] += 1
-            total_validos += 1
-            
-    dados_grafico = {k: v for k, v in contagem_comportamento.items() if v > 0}
-    
-    col_dna_grafico, col_dna_barras = st.columns([1, 2], gap="large")
-    
-    cores_map = {
-        "🏆 Sniper": "#10b981",
-        "🥬 Mão de Alface": "#F3BA2F",
-        "🛡️ Saída Estratégica": "#64748b",
-        "🛑 Resiliência": "#f97316",
-        "💥 Descontrole": "#ef4444",
-    }
-    
-    if total_validos > 0:
-        with col_dna_grafico:
-            labels = list(dados_grafico.keys())
-            values = list(dados_grafico.values())
-            colors = [cores_map.get(l, "gray") for l in labels]
-            
-            fig_dna = go.Figure(data=[go.Pie(
-                labels=labels, 
-                values=values, 
-                hole=.6,
-                marker=dict(colors=colors, line=dict(color='#0f172a', width=3)),
-                textinfo='percent',
-                textposition='outside',
-                textfont=dict(size=14, color='white', family="sans-serif"),
-                hoverinfo='label+value'
-            )])
-            
-            fig_dna.update_layout(
-                showlegend=False,
-                margin=dict(l=10, r=10, t=10, b=50),
-                height=250,
-                paper_bgcolor='rgba(0,0,0,0)',
-                annotations=[dict(text=f"{total_validos}", x=0.5, y=0.5, font_size=20, showarrow=False, font_color="white")]
-            )
-            st.plotly_chart(fig_dna, use_container_width=True)
-            st.markdown(f"<div style='text-align: center; color: gray; font-size: 0.8em; margin-top: -10px;'>Operações Qualificadas</div>", unsafe_allow_html=True)
+    st.info("Aguardando operações com Alvo/Stop para gerar DNA.")
 
-        with col_dna_barras:
-            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            for item, qtd in dados_grafico.items():
-                pct = (qtd / total_validos) * 100
-                cor = cores_map.get(item, "gray")
-                st.markdown(f"""
-                    <div style="margin-bottom: 12px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                            <span style="color: #e2e8f0; font-size: 0.9em; font-weight: 500;">{item}</span>
-                        </div>
-                        <div style="width: 100%; background-color: rgba(255,255,255,0.05); height: 8px; border-radius: 4px;">
-                            <div style="width: {pct}%; background-color: {cor}; height: 100%; border-radius: 4px; box-shadow: 0 0 8px {cor}40;"></div>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-    else:
-        st.info("Aguardando dados de operações com alvo e stop para gerar o DNA.")
+# Comparação Comportamental
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
+st.subheader("⚖️ Comparação Comportamental")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("""<div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 20px 0;"></div>""", unsafe_allow_html=True)
-    st.subheader("⚖️ Comparação Comportamental")
-    st.caption("Comparativo de performance entre operações planejadas e operações livres.")
-    
-    ops_estruturadas = [o for o in historico_fechado if o.get('teve_projecao')]
-    ops_livres = [o for o in historico_fechado if not o.get('teve_projecao')]
-    
-    lucro_est = sum(o['lucro_usdt'] for o in ops_estruturadas)
-    wins_est = sum(1 for o in ops_estruturadas if o['lucro_usdt'] > 0)
-    total_est = len(ops_estruturadas)
-    wr_est = (wins_est / total_est * 100) if total_est > 0 else 0.0
-    media_est = (lucro_est / total_est) if total_est > 0 else 0.0
-    
-    lucro_liv = sum(o['lucro_usdt'] for o in ops_livres)
-    wins_liv = sum(1 for o in ops_livres if o['lucro_usdt'] > 0)
-    total_liv = len(ops_livres)
-    wr_liv = (wins_liv / total_liv * 100) if total_liv > 0 else 0.0
-    media_liv = (lucro_liv / total_liv) if total_liv > 0 else 0.0
-    
-    cor_azul = "#3b82f6"
-    cor_amarela = "#F3BA2F"
-    
-    col_c1, col_c2, col_c3 = st.columns(3)
-    
-    with col_c1:
-        st.markdown(f"""
-            <div class="mini-metric">
-                <span class="mini-label">LUCRO LÍQUIDO</span>
-                <div style="display: flex; justify-content: space-around; align-items: center;">
-                    <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">${lucro_est:.2f}</div>
-                        <div style="font-size: 0.75em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 4px;">planejado</div>
-                    </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 30px;"></div>
-                    <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 1.8em; font-weight: bold; line-height: 1;">${lucro_liv:.2f}</div>
-                        <div style="font-size: 0.75em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 4px;">livre</div>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    with col_c2:
-        st.markdown(f"""
-            <div class="mini-metric">
-                <span class="mini-label">TAXA DE ACERTO</span>
-                <div style="display: flex; justify-content: space-around; align-items: center;">
-                    <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">{wr_est:.0f}%</div>
-                        <div style="font-size: 0.75em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 4px;">planejado</div>
-                    </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 30px;"></div>
-                    <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 1.8em; font-weight: bold; line-height: 1;">{wr_liv:.0f}%</div>
-                        <div style="font-size: 0.75em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 4px;">livre</div>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    with col_c3:
-        st.markdown(f"""
-            <div class="mini-metric">
-                <span class="mini-label">RETORNO MÉDIO</span>
-                <div style="display: flex; justify-content: space-around; align-items: center;">
-                    <div style="text-align: center;">
-                        <div style="color: {cor_azul}; font-size: 1.8em; font-weight: bold; line-height: 1;">${media_est:.2f}</div>
-                        <div style="font-size: 0.75em; color: {cor_azul}; opacity: 0.7; font-weight: 500; margin-top: 4px;">planejado</div>
-                    </div>
-                    <div style="border-left: 1px solid rgba(255,255,255,0.1); height: 30px;"></div>
-                    <div style="text-align: center;">
-                        <div style="color: {cor_amarela}; font-size: 1.8em; font-weight: bold; line-height: 1;">${media_liv:.2f}</div>
-                        <div style="font-size: 0.75em; color: {cor_amarela}; opacity: 0.7; font-weight: 500; margin-top: 4px;">livre</div>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+ops_est = [o for o in historico_fechado if o.get('teve_projecao')]
+ops_liv = [o for o in historico_fechado if not o.get('teve_projecao')]
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    lista_planejados = [o['lucro_usdt'] for o in historico_fechado if o.get('teve_projecao')]
-    lista_livres = [o['lucro_usdt'] for o in historico_fechado if not o.get('teve_projecao')]
-    
-    df_est = pd.DataFrame({'lucro': lista_planejados})
-    df_liv = pd.DataFrame({'lucro': lista_livres})
-    
-    fig_comp = go.Figure()
-    
-    if not df_est.empty:
-        df_est['acumulado'] = df_est['lucro'].cumsum()
-        df_est['trade_num'] = range(1, len(df_est) + 1)
-        
-        fig_comp.add_trace(go.Scatter(
-            x=df_est['trade_num'], 
-            y=df_est['acumulado'], 
-            mode='lines+markers', 
-            name='Com Planejamento',
-            line=dict(color=cor_azul, width=3),
-            marker=dict(size=6),
-            hovertemplate="Planejado: $%{y:.2f}<extra></extra>"
-        ))
+lucro_est = sum(o['lucro_usdt'] for o in ops_est)
+lucro_liv = sum(o['lucro_usdt'] for o in ops_liv)
+wr_est = (sum(1 for o in ops_est if o['lucro_usdt'] > 0) / len(ops_est) * 100) if ops_est else 0.0
+wr_liv = (sum(1 for o in ops_liv if o['lucro_usdt'] > 0) / len(ops_liv) * 100) if ops_liv else 0.0
+media_est = (lucro_est / len(ops_est)) if ops_est else 0.0
+media_liv = (lucro_liv / len(ops_liv)) if ops_liv else 0.0
 
-    if not df_liv.empty:
-        df_liv['acumulado'] = df_liv['lucro'].cumsum()
-        df_liv['trade_num'] = range(1, len(df_liv) + 1)
-        
-        fig_comp.add_trace(go.Scatter(
-            x=df_liv['trade_num'], 
-            y=df_liv['acumulado'], 
-            mode='lines+markers', 
-            name='Sem Planejamento',
-            line=dict(color=cor_amarela, width=3),
-            marker=dict(size=6),
-            hovertemplate="Livre: $%{y:.2f}<extra></extra>"
-        ))
-        
-    eixo_x_max = max(len(lista_planejados), len(lista_livres)) if (lista_planejados or lista_livres) else 10
-        
-    fig_comp.update_layout(
-        height=350,
-        margin=dict(l=0, r=0, t=30, b=0),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="white", size=10)),
-        xaxis=dict(
-            showgrid=False, 
-            zeroline=False, 
-            title=dict(text="Quantidade de Trades Executados", font=dict(size=12, color="#9ca3af")),
-            tickmode='linear',
-            dtick=1,
-            color="#9ca3af",
-            range=[0.5, eixo_x_max + 0.5]
-        ),
-        yaxis=dict(
-            showgrid=True, 
-            gridcolor='rgba(255,255,255,0.05)', 
-            zeroline=True, 
-            zerolinecolor='rgba(255,255,255,0.1)', 
-            tickfont=dict(color="gray"),
-            tickprefix="$"
-        ),
-        hovermode="x unified"
-    )
-    
-    if lista_planejados or lista_livres:
-        st.plotly_chart(fig_comp, use_container_width=True, config={'displayModeBar': False})
-    else:
-        st.info("Realize operações de ambos os tipos para visualizar a comparação gráfica.")
+cc1, cc2, cc3 = st.columns(3)
+with cc1: st.markdown(f"""<div class="mini-metric"><span class="mini-label">LUCRO LÍQUIDO</span><div style="display: flex; justify-content: space-around;"><div style="text-align: center;"><div style="color: #3b82f6; font-size: 1.5em; font-weight: bold;">${lucro_est:.2f}</div><div style="font-size: 0.7em; color: #3b82f6;">planejado</div></div><div style="border-left: 1px solid rgba(255,255,255,0.1);"></div><div style="text-align: center;"><div style="color: #F3BA2F; font-size: 1.5em; font-weight: bold;">${lucro_liv:.2f}</div><div style="font-size: 0.7em; color: #F3BA2F;">livre</div></div></div></div>""", unsafe_allow_html=True)
+with cc2: st.markdown(f"""<div class="mini-metric"><span class="mini-label">TAXA DE ACERTO</span><div style="display: flex; justify-content: space-around;"><div style="text-align: center;"><div style="color: #3b82f6; font-size: 1.5em; font-weight: bold;">{wr_est:.0f}%</div><div style="font-size: 0.7em; color: #3b82f6;">planejado</div></div><div style="border-left: 1px solid rgba(255,255,255,0.1);"></div><div style="text-align: center;"><div style="color: #F3BA2F; font-size: 1.5em; font-weight: bold;">{wr_liv:.0f}%</div><div style="font-size: 0.7em; color: #F3BA2F;">livre</div></div></div></div>""", unsafe_allow_html=True)
+with cc3: st.markdown(f"""<div class="mini-metric"><span class="mini-label">RETORNO MÉDIO</span><div style="display: flex; justify-content: space-around;"><div style="text-align: center;"><div style="color: #3b82f6; font-size: 1.5em; font-weight: bold;">${media_est:.2f}</div><div style="font-size: 0.7em; color: #3b82f6;">planejado</div></div><div style="border-left: 1px solid rgba(255,255,255,0.1);"></div><div style="text-align: center;"><div style="color: #F3BA2F; font-size: 1.5em; font-weight: bold;">${media_liv:.2f}</div><div style="font-size: 0.7em; color: #F3BA2F;">livre</div></div></div></div>""", unsafe_allow_html=True)
 
+# ==============================================================================
+# BLOCO 10: COFRE DOS ATIVOS (A SEÇÃO COMPLEXA)
+# ==============================================================================
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown("""
-    <div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>
-""", unsafe_allow_html=True)
-
+st.markdown("""<div style="width: 100%; height: 2px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(243, 186, 47, 0.5), rgba(255,255,255,0.05)); margin-bottom: 30px;"></div>""", unsafe_allow_html=True)
 st.subheader("🏦 Cofre dos Ativos", help="Análise de exposição (risco) e performance detalhada por ativo.")
 
 dados_ativos = {}
-
+# Processa dados para o cofre (Histórico + Aberto)
 if historico_fechado:
     for o in historico_fechado:
         simb = o.get('simbolo', 'BTC')
         if simb not in dados_ativos: dados_ativos[simb] = {'investido_aberto': 0.0, 'qtd_aberta': 0.0, 'lucro_realizado': 0.0, 'wins': 0, 'trades': 0}
-        
         dados_ativos[simb]['lucro_realizado'] += float(o.get('lucro_usdt', 0))
         dados_ativos[simb]['trades'] += 1
-        if float(o.get('lucro_usdt', 0)) > 0:
-            dados_ativos[simb]['wins'] += 1
-
+        if float(o.get('lucro_usdt', 0)) > 0: dados_ativos[simb]['wins'] += 1
 if ordens_abertas:
     for o in ordens_abertas:
         simb = o.get('simbolo', 'BTC')
         if simb not in dados_ativos: dados_ativos[simb] = {'investido_aberto': 0.0, 'qtd_aberta': 0.0, 'lucro_realizado': 0.0, 'wins': 0, 'trades': 0}
-        
         dados_ativos[simb]['investido_aberto'] += float(o.get('valor_investido_usdt', 0))
         dados_ativos[simb]['qtd_aberta'] += float(o.get('quantidade_btc', 0))
 
 if not dados_ativos:
     st.info("Nenhuma operação registrada para análise de ativos.")
 else:
-    col_grafico_alocacao, col_destaques = st.columns([1.2, 2], gap="large")
+    # --- PARTE A: O DONUT + DESTAQUES (Lado a Lado) ---
+    col_grafico, col_destaques = st.columns([1.2, 2], gap="large")
     
-    with col_grafico_alocacao:
-        labels_aloc = []
-        values_aloc = []
-        colors_aloc = []
-        
-        total_investido_geral = 0.0
-        
-        for s, d in dados_ativos.items():
-            if d['investido_aberto'] > 0:
-                labels_aloc.append(s)
-                values_aloc.append(d['investido_aberto'])
-                colors_aloc.append(ASSETS_CONFIG.get(s, {}).get("cor", "#888888"))
-                total_investido_geral += d['investido_aberto']
-        
+    with col_grafico:
+        total_investido_geral = sum(d['investido_aberto'] for d in dados_ativos.values())
         if total_investido_geral > 0:
-            fig_aloc = go.Figure(data=[go.Pie(
-                labels=labels_aloc, 
-                values=values_aloc, 
-                hole=.6, 
-                marker=dict(colors=colors_aloc, line=dict(color='#0e1117', width=3)),
-                textinfo='label+percent',
-                textposition='outside',
-                textfont=dict(size=14, color='white', family="sans-serif", weight="bold"),
-                showlegend=False
-            )])
+            labels, values, colors = [], [], []
+            for s, d in dados_ativos.items():
+                if d['investido_aberto'] > 0:
+                    labels.append(s)
+                    values.append(d['investido_aberto'])
+                    colors.append(ASSETS_CONFIG.get(s, {}).get("cor", "#888"))
             
-            fig_aloc.update_layout(
-                margin=dict(l=20, r=20, t=20, b=60),
-                height=320,
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                annotations=[dict(
-                    text=f"<span style='font-size:0.8em; color:gray'>Total em Risco</span><br><span style='font-size:1.4em; color:white; font-weight:bold'>${total_investido_geral:,.0f}</span>",
-                    x=0.5, y=0.5,
-                    font_size=12,
-                    showarrow=False
-                )]
-            )
-            st.plotly_chart(fig_aloc, use_container_width=True)
+            fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.6, marker=dict(colors=colors, line=dict(color='#0e1117', width=3)), textinfo='label+percent', textposition='outside', textfont=dict(size=14, color='white', weight='bold'), showlegend=False)])
+            fig.update_layout(margin=dict(l=20, r=20, t=20, b=60), height=320, paper_bgcolor='rgba(0,0,0,0)', annotations=[dict(text=f"<span style='font-size:0.8em; color:gray'>Total em Risco</span><br><span style='font-size:1.4em; color:white; font-weight:bold'>${total_investido_geral:,.0f}</span>", x=0.5, y=0.5, font_size=12, showarrow=False)])
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Carteira 100% Líquida.")
 
     with col_destaques:
-        # Lógica dos Destaques
-        melhor_ativo = max(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
-        pior_ativo = min(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
+        melhor = max(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
+        pior = min(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
         maior_risco = max(dados_ativos.items(), key=lambda x: x[1]['investido_aberto'], default=(None, None))
         
         st.markdown("##### 🏆 Destaques do Portfólio")
         st.markdown("<br>", unsafe_allow_html=True)
         
-        c_dest1, c_dest2, c_dest3 = st.columns(3)
-        
-        # Estilo Base Comum (Compacto e Dark)
+        c_d1, c_d2, c_d3 = st.columns(3)
         style_base = "background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(255, 255, 255, 0.05); padding: 10px; border-radius: 8px; text-align: center;"
         
-        with c_dest1:
-            if melhor_ativo[0] and melhor_ativo[1]['lucro_realizado'] > 0:
-                icone_hero = ASSETS_CONFIG.get(melhor_ativo[0], {}).get("icon", "")
-                st.markdown(f"""
-                    <div style="{style_base} border-top: 3px solid #22c55e;">
-                        <div style="font-size: 0.65em; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">Maior Lucro</div>
-                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_hero} {melhor_ativo[0]}</div>
-                        <div style="color: #22c55e; font-weight: bold; font-size: 0.95em;">+${melhor_ativo[1]['lucro_realizado']:.2f}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div style='{style_base} border-top: 3px solid gray; color: gray; font-size: 0.7em;'>Sem lucros</div>", unsafe_allow_html=True)
-                
-        with c_dest2:
-            if pior_ativo[0] and pior_ativo[1]['lucro_realizado'] < 0:
-                icone_villain = ASSETS_CONFIG.get(pior_ativo[0], {}).get("icon", "")
-                st.markdown(f"""
-                    <div style="{style_base} border-top: 3px solid #ef4444;">
-                        <div style="font-size: 0.65em; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">Maior Prejuízo</div>
-                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_villain} {pior_ativo[0]}</div>
-                        <div style="color: #ef4444; font-weight: bold; font-size: 0.95em;">-${abs(pior_ativo[1]['lucro_realizado']):.2f}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div style='{style_base} border-top: 3px solid gray; color: gray; font-size: 0.7em;'>Sem perdas</div>", unsafe_allow_html=True)
-
-        with c_dest3:
+        with c_d1:
+            if melhor[0] and melhor[1]['lucro_realizado'] > 0:
+                ic = ASSETS_CONFIG.get(melhor[0], {}).get("icon", "")
+                st.markdown(f"""<div style="{style_base} border-top: 3px solid #22c55e;"><div style="font-size: 0.65em; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">Maior Lucro</div><div style="font-size: 1.1em; font-weight: bold; color: white;">{ic} {melhor[0]}</div><div style="color: #22c55e; font-weight: bold; font-size: 0.95em;">+${melhor[1]['lucro_realizado']:.2f}</div></div>""", unsafe_allow_html=True)
+            else: st.markdown(f"<div style='{style_base} border-top: 3px solid gray; color: gray; font-size: 0.7em;'>Sem lucros</div>", unsafe_allow_html=True)
+        
+        with c_d2:
+            if pior[0] and pior[1]['lucro_realizado'] < 0:
+                ic = ASSETS_CONFIG.get(pior[0], {}).get("icon", "")
+                st.markdown(f"""<div style="{style_base} border-top: 3px solid #ef4444;"><div style="font-size: 0.65em; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">Maior Prejuízo</div><div style="font-size: 1.1em; font-weight: bold; color: white;">{ic} {pior[0]}</div><div style="color: #ef4444; font-weight: bold; font-size: 0.95em;">-${abs(pior[1]['lucro_realizado']):.2f}</div></div>""", unsafe_allow_html=True)
+            else: st.markdown(f"<div style='{style_base} border-top: 3px solid gray; color: gray; font-size: 0.7em;'>Sem perdas</div>", unsafe_allow_html=True)
+            
+        with c_d3:
             if maior_risco[0] and maior_risco[1]['investido_aberto'] > 0:
-                icone_risk = ASSETS_CONFIG.get(maior_risco[0], {}).get("icon", "")
-                st.markdown(f"""
-                    <div style="{style_base} border-top: 3px solid #eab308;">
-                        <div style="font-size: 0.65em; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">Maior Exposição</div>
-                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_risk} {maior_risco[0]}</div>
-                        <div style="color: #eab308; font-weight: bold; font-size: 0.95em;">${maior_risco[1]['investido_aberto']:.2f}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div style='{style_base} border-top: 3px solid gray; color: gray; font-size: 0.7em;'>Líquido</div>", unsafe_allow_html=True)
+                ic = ASSETS_CONFIG.get(maior_risco[0], {}).get("icon", "")
+                st.markdown(f"""<div style="{style_base} border-top: 3px solid #eab308;"><div style="font-size: 0.65em; color: #9ca3af; text-transform: uppercase; margin-bottom: 4px;">Maior Exposição</div><div style="font-size: 1.1em; font-weight: bold; color: white;">{ic} {maior_risco[0]}</div><div style="color: #eab308; font-weight: bold; font-size: 0.95em;">${maior_risco[1]['investido_aberto']:.2f}</div></div>""", unsafe_allow_html=True)
+            else: st.markdown(f"<div style='{style_base} border-top: 3px solid gray; color: gray; font-size: 0.7em;'>Líquido</div>", unsafe_allow_html=True)
 
-        with c_dest3:
-            if maior_risco[0] and maior_risco[1]['investido_aberto'] > 0:
-                icone_risk = ASSETS_CONFIG.get(maior_risco[0], {}).get("icon", "")
-                st.markdown(f"""
-                    <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2); padding: 15px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 0.7em; color: #fde047; text-transform: uppercase; margin-bottom: 5px;">Maior Exposição</div>
-                        <div style="font-size: 1.4em; font-weight: bold; color: white;">{icone_risk} {maior_risco[0]}</div>
-                        <div style="color: #eab308; font-weight: bold; font-size: 1.1em;">${maior_risco[1]['investido_aberto']:.2f}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("<div style='padding: 15px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Líquido</div>", unsafe_allow_html=True)
-
+    # --- PARTE B: LISTA DE CARDS WIDE ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 📜 Detalhes por Ativo")
     
     ativos_ordenados = sorted(dados_ativos.keys())
-    
     for simb in ativos_ordenados:
         stats = dados_ativos[simb]
-        
         win_rate = (stats['wins'] / stats['trades'] * 100) if stats['trades'] > 0 else 0.0
         cor_lucro = "#22c55e" if stats['lucro_realizado'] >= 0 else "#ef4444"
         sinal_lucro = "+" if stats['lucro_realizado'] >= 0 else ""
         cor_wr = "#22c55e" if win_rate >= 50 else "#e2e8f0"
-        
         icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
         
-        html_pm = ""
+        # HTML do Preço Médio (Se ativo)
         if stats['qtd_aberta'] > 0:
             preco_medio = stats['investido_aberto'] / stats['qtd_aberta']
             cotacao = cotacoes_atuais.get(simb, 0.0)
-            
             cor_status = "#22c55e" if cotacao >= preco_medio else "#ef4444"
             diff_pct = ((cotacao - preco_medio) / preco_medio) * 100
             sinal_diff = "+" if diff_pct >= 0 else ""
-            
-            html_pm = f"""
-<div class="asset-stat-box" style="min-width: 140px;">
-<div class="asset-label">Status Posição</div>
-<div style="font-size: 0.9em; color: gray;">PM: ${preco_medio:,.2f}</div>
-<div style="font-size: 1.1em; font-weight: bold; color: {cor_status};">
-${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
-</div>
-</div>
-<div class="vertical-divider"></div>
-"""
+            html_pm = f"""<div class="asset-stat-box" style="min-width: 140px;"><div class="asset-label">Status Posição</div><div style="font-size: 0.9em; color: gray;">PM: ${preco_medio:,.2f}</div><div style="font-size: 1.1em; font-weight: bold; color: {cor_status};">${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)</div></div><div class="vertical-divider"></div>"""
         else:
-            html_pm = f"""
-<div class="asset-stat-box" style="min-width: 140px;">
-<div class="asset-label">Status</div>
-<div style="font-size: 0.9em; color: gray; margin-top: 5px;">Posição Zerada</div>
-</div>
-<div class="vertical-divider"></div>
-"""
+            html_pm = """<div class="asset-stat-box" style="min-width: 140px;"><div class="asset-label">Status</div><div style="font-size: 0.9em; color: gray; margin-top: 5px;">Posição Zerada</div></div><div class="vertical-divider"></div>"""
 
+        # HTML DO CARD WIDE (SEM INDENTAÇÃO INTERNA PARA EVITAR BUGS)
         html_card = f"""
 <div class="asset-row">
 <div class="asset-identity">
@@ -1017,9 +602,7 @@ ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
 {html_pm}
 <div class="asset-stat-box">
 <div class="asset-label">Lucro Realizado</div>
-<div class="asset-value" style="color: {cor_lucro};">
-{sinal_lucro}${stats['lucro_realizado']:,.2f}
-</div>
+<div class="asset-value" style="color: {cor_lucro};">{sinal_lucro}${stats['lucro_realizado']:,.2f}</div>
 </div>
 <div class="vertical-divider"></div>
 <div class="asset-stat-box">
