@@ -911,8 +911,7 @@ if not dados_ativos:
     st.info("Nenhuma operação registrada para análise de ativos.")
 else:
     # --- ANDAR 1: O RADAR DE ALOCAÇÃO + DESTAQUES ---
-    # Ajuste de layout: Gráfico menor (1) e Destaques maiores (2.5) para caber 3 cards
-    col_grafico_alocacao, col_destaques = st.columns([1, 2.5], gap="large")
+    col_grafico_alocacao, col_destaques = st.columns([1.2, 2], gap="large")
     
     with col_grafico_alocacao:
         labels_aloc = []
@@ -929,26 +928,26 @@ else:
                 total_investido_geral += d['investido_aberto']
         
         if total_investido_geral > 0:
+            # Estilo IDÊNTICO ao DNA Operacional (Texto fora, maior, negrito)
             fig_aloc = go.Figure(data=[go.Pie(
                 labels=labels_aloc, 
                 values=values_aloc, 
-                hole=.65,
+                hole=.6,
                 marker=dict(colors=colors_aloc, line=dict(color='#0e1117', width=3)),
-                textinfo='percent', # Só porcentagem pra limpar
-                textposition='inside',
-                textfont=dict(size=12, color='white'),
+                textinfo='label+percent',
+                textposition='outside', # Joga o texto para fora
+                textfont=dict(size=14, color='white', family="sans-serif", weight="bold"), # Fonte maior e negrito
                 showlegend=False
             )])
             
-            # Margens zeradas para não cortar e Annotations removidas
             fig_aloc.update_layout(
-                margin=dict(l=5, r=5, t=5, b=5),
-                height=160,
+                margin=dict(l=20, r=20, t=20, b=20), # Margem maior para não cortar o texto
+                height=280, # Altura maior para dar destaque
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)'
             )
             st.plotly_chart(fig_aloc, use_container_width=True)
-            st.markdown(f"<div style='text-align: center; font-size: 0.8em; color: gray; margin-top: -10px;'>Total em Risco: <b>${total_investido_geral:,.0f}</b></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; font-size: 0.9em; color: gray; margin-top: -20px;'>Total em Risco: <b>${total_investido_geral:,.0f}</b></div>", unsafe_allow_html=True)
         else:
             st.info("Carteira 100% Líquida.")
 
@@ -956,53 +955,51 @@ else:
         # Lógica dos Destaques
         melhor_ativo = max(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
         pior_ativo = min(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
-        
-        # Lógica do Maior Risco (Exposição)
         maior_risco = max(dados_ativos.items(), key=lambda x: x[1]['investido_aberto'], default=(None, None))
         
         st.markdown("##### 🏆 Destaques do Portfólio")
+        st.markdown("<br>", unsafe_allow_html=True) # Espaço para alinhar com o centro do gráfico
         
-        # Agora são 3 colunas para os 3 cards
         c_dest1, c_dest2, c_dest3 = st.columns(3)
         
         with c_dest1:
             if melhor_ativo[0] and melhor_ativo[1]['lucro_realizado'] > 0:
                 icone_hero = ASSETS_CONFIG.get(melhor_ativo[0], {}).get("icon", "")
                 st.markdown(f"""
-                    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 0.75em; color: #86efac; text-transform: uppercase;">Maior Lucro</div>
-                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_hero} {melhor_ativo[0]}</div>
-                        <div style="color: #22c55e; font-weight: bold;">+${melhor_ativo[1]['lucro_realizado']:.2f}</div>
+                    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.7em; color: #86efac; text-transform: uppercase; margin-bottom: 5px;">Maior Lucro</div>
+                        <div style="font-size: 1.4em; font-weight: bold; color: white;">{icone_hero} {melhor_ativo[0]}</div>
+                        <div style="color: #22c55e; font-weight: bold; font-size: 1.1em;">+${melhor_ativo[1]['lucro_realizado']:.2f}</div>
                     </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown("<div style='padding: 12px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Sem lucros</div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding: 15px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Sem lucros</div>", unsafe_allow_html=True)
                 
         with c_dest2:
             if pior_ativo[0] and pior_ativo[1]['lucro_realizado'] < 0:
                 icone_villain = ASSETS_CONFIG.get(pior_ativo[0], {}).get("icon", "")
                 st.markdown(f"""
-                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 0.75em; color: #fca5a5; text-transform: uppercase;">Maior Prejuízo</div>
-                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_villain} {pior_ativo[0]}</div>
-                        <div style="color: #ef4444; font-weight: bold;">-${abs(pior_ativo[1]['lucro_realizado']):.2f}</div>
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.7em; color: #fca5a5; text-transform: uppercase; margin-bottom: 5px;">Maior Prejuízo</div>
+                        <div style="font-size: 1.4em; font-weight: bold; color: white;">{icone_villain} {pior_ativo[0]}</div>
+                        <div style="color: #ef4444; font-weight: bold; font-size: 1.1em;">-${abs(pior_ativo[1]['lucro_realizado']):.2f}</div>
                     </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown("<div style='padding: 12px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Sem perdas</div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding: 15px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Sem perdas</div>", unsafe_allow_html=True)
 
         with c_dest3:
             if maior_risco[0] and maior_risco[1]['investido_aberto'] > 0:
                 icone_risk = ASSETS_CONFIG.get(maior_risco[0], {}).get("icon", "")
                 st.markdown(f"""
-                    <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2); padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 0.75em; color: #fde047; text-transform: uppercase;">Maior Exposição</div>
-                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_risk} {maior_risco[0]}</div>
-                        <div style="color: #eab308; font-weight: bold;">${maior_risco[1]['investido_aberto']:.2f}</div>
+                    <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2); padding: 15px; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.7em; color: #fde047; text-transform: uppercase; margin-bottom: 5px;">Maior Exposição</div>
+                        <div style="font-size: 1.4em; font-weight: bold; color: white;">{icone_risk} {maior_risco[0]}</div>
+                        <div style="color: #eab308; font-weight: bold; font-size: 1.1em;">${maior_risco[1]['investido_aberto']:.2f}</div>
                     </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown("<div style='padding: 12px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Líquido</div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding: 15px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Líquido</div>", unsafe_allow_html=True)
 
     # --- ANDAR 2: LISTA DE CARDS DETALHADOS ---
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1020,7 +1017,6 @@ else:
         
         icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
         
-        # HTML do Preço Médio (Se houver posição)
         html_pm = ""
         if stats['qtd_aberta'] > 0:
             preco_medio = stats['investido_aberto'] / stats['qtd_aberta']
@@ -1049,7 +1045,6 @@ ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
 <div class="vertical-divider"></div>
 """
 
-        # HTML DO CARD WIDE (SEM INDENTAÇÃO PARA CORRIGIR O BUG)
         html_card = f"""
 <div class="asset-row">
 <div class="asset-identity">
@@ -1059,7 +1054,7 @@ ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
 <div class="asset-stats-container">
 {html_pm}
 <div class="asset-stat-box">
-<div class="asset-label">Lucro Realizado</div>
+<div class="asset-label">Resultado Líquido</div>
 <div class="asset-value" style="color: {cor_lucro};">
 {sinal_lucro}${stats['lucro_realizado']:,.2f}
 </div>
