@@ -102,30 +102,24 @@ st.markdown("""
 def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
     if not alvo and not stop:
         return None
-        
     lucro_real = preco_venda - preco_compra
-    
     if lucro_real >= 0:
         if alvo and alvo > preco_compra:
             alvo_esperado = alvo - preco_compra
             pct_alcancado = lucro_real / alvo_esperado
-            
             if pct_alcancado >= 0.90: return "🏆 Sniper"
             elif pct_alcancado > 0.10: return "🥬 Mão de Alface"
             else: return "🛡️ Saída Estratégica"
-        else:
-            return "⚖️ Ganho Livre"
+        else: return "⚖️ Ganho Livre"
     else:
         if stop and stop < preco_compra:
             perda_real = preco_compra - preco_venda
             stop_maximo = preco_compra - stop
             pct_perdido = perda_real / stop_maximo
-            
             if pct_perdido <= 0.10: return "🛡️ Saída Estratégica"
             elif pct_perdido <= 1.10: return "🛑 Resiliência"
             else: return "💥 Descontrole"
-        else:
-            return "💥 Perda Livre"
+        else: return "💥 Perda Livre"
 
 # --- FUNÇÕES DE API E SINCRONIZAÇÃO ---
 def obter_cotacao(simbolo):
@@ -190,9 +184,8 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- ROW 1: SELETOR DE ATIVOS E CARD DE PREÇO ---
-            # Usando st.columns(2) para garantir simetria exata com a linha de baixo
-            col_sel_1, col_sel_2 = st.columns(2)
+            # --- ROW 1: SELETOR DE ATIVOS E CARD DE PREÇO (SIMETRIA PERFEITA) ---
+            col_sel_1, col_sel_2 = st.columns(2) # 50% para cada lado, igual a linha de baixo
             
             with col_sel_1:
                 ativo_selecionado = st.selectbox(
@@ -205,23 +198,22 @@ with col_boleta:
             cotacao_atual = obter_cotacao(ativo_selecionado)
             
             with col_sel_2:
-                # Card Customizado que imita exatamente um Input do Streamlit (Dark Mode)
+                # HTML Clone do Input do Streamlit (Mesma altura, borda e cor de fundo)
                 st.markdown(f"""
-                    <div style="margin-top: 0px;">
-                        <label style="font-size: 14px; color: #fafafa; margin-bottom: 8px; display: block; font-family: 'Source Sans Pro', sans-serif;">Cotação Atual ({ativo_selecionado})</label>
+                    <div style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%;">
+                        <label style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem; font-family: 'Source Sans Pro', sans-serif;">Cotação Atual ({ativo_selecionado})</label>
                         <div style="
-                            background-color: #0e1117; /* Cor padrão do input no dark mode */
+                            background-color: rgba(255, 255, 255, 0.05); /* Fundo sutil igual inputs */
                             border: 1px solid rgba(250, 250, 250, 0.2); /* Borda padrão */
                             border-radius: 0.5rem;
-                            padding: 0 12px;
+                            padding: 0 1rem;
                             display: flex;
                             align-items: center;
                             justify-content: space-between;
-                            height: 48px; /* Altura exata para casar com o selectbox */
-                            box-sizing: border-box;
+                            min-height: 45px; /* Altura padrão dos inputs do Streamlit */
                         ">
                             <strong style="font-size: 1.1em; color: #F3BA2F; font-family: monospace;">${cotacao_atual:,.2f}</strong>
-                            <span style="color: #555; font-size: 0.8em; font-weight: bold;">USDT</span>
+                            <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -325,7 +317,7 @@ with col_boleta:
                 
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 
-                # Card de cotação atual na aba de venda também alinhado
+                # Card de Venda Alinhado
                 st.markdown(f"""
                     <div style="background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                         <span style="color: #9ca3af; font-size: 0.95em;">Mercado Atual ({simbolo_ativo})</span>
