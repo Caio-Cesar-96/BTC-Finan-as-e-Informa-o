@@ -816,7 +816,7 @@ st.markdown("""
 .asset-row {
     background: linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.8)) !important;
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-top: 3px solid #F3BA2F !important; /* DOURADO FIXO */
+    border-top: 3px solid #F3BA2F !important;
     border-radius: 8px !important;
     padding: 15px 25px !important;
     margin-bottom: 15px !important;
@@ -874,19 +874,6 @@ st.markdown("""
     height: 30px !important;
     background-color: rgba(255, 255, 255, 0.1) !important;
 }
-/* Estilo para a barra de progresso PM vs Atual */
-.pm-bar-bg {
-    width: 100px;
-    height: 4px;
-    background-color: rgba(255,255,255,0.1);
-    border-radius: 2px;
-    margin: 5px auto 0 auto;
-    overflow: hidden;
-}
-.pm-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -898,7 +885,6 @@ st.markdown("""
 st.subheader("🏦 Cofre dos Ativos", help="Análise de exposição (risco) e performance detalhada por ativo.")
 
 # --- PROCESSAMENTO DE DADOS PARA O COFRE ---
-# Estrutura: { 'BTC': {'investido_aberto': 0.0, 'qtd_aberta': 0.0, 'lucro_realizado': 0.0, 'wins': 0, 'trades': 0} }
 dados_ativos = {}
 
 # 1. Processar Histórico (Fechado)
@@ -921,15 +907,14 @@ if ordens_abertas:
         dados_ativos[simb]['investido_aberto'] += float(o.get('valor_investido_usdt', 0))
         dados_ativos[simb]['qtd_aberta'] += float(o.get('quantidade_btc', 0))
 
-# Se não tiver dados nenhum
 if not dados_ativos:
     st.info("Nenhuma operação registrada para análise de ativos.")
 else:
-    # --- ANDAR 1: O RADAR DE ALOCAÇÃO ---
-    col_grafico_alocacao, col_destaques = st.columns([1, 1.5], gap="large")
+    # --- ANDAR 1: O RADAR DE ALOCAÇÃO + DESTAQUES ---
+    # Ajuste de layout: Gráfico menor (1) e Destaques maiores (2.5) para caber 3 cards
+    col_grafico_alocacao, col_destaques = st.columns([1, 2.5], gap="large")
     
     with col_grafico_alocacao:
-        # Prepara dados para o gráfico de rosca (Apenas o que tem dinheiro investido agora)
         labels_aloc = []
         values_aloc = []
         colors_aloc = []
@@ -940,7 +925,6 @@ else:
             if d['investido_aberto'] > 0:
                 labels_aloc.append(s)
                 values_aloc.append(d['investido_aberto'])
-                # Tenta pegar a cor do ativo, senão usa cinza
                 colors_aloc.append(ASSETS_CONFIG.get(s, {}).get("cor", "#888888"))
                 total_investido_geral += d['investido_aberto']
         
@@ -948,137 +932,149 @@ else:
             fig_aloc = go.Figure(data=[go.Pie(
                 labels=labels_aloc, 
                 values=values_aloc, 
-                hole=.7,
-                marker=dict(colors=colors_aloc, line=dict(color='#0e1117', width=4)), # Borda escura pra separar
-                textinfo='label+percent',
-                textfont=dict(size=13, color='white'),
+                hole=.65,
+                marker=dict(colors=colors_aloc, line=dict(color='#0e1117', width=3)),
+                textinfo='percent', # Só porcentagem pra limpar
+                textposition='inside',
+                textfont=dict(size=12, color='white'),
                 showlegend=False
             )])
             
+            # Margens zeradas para não cortar e Annotations removidas
             fig_aloc.update_layout(
-                margin=dict(l=20, r=20, t=0, b=0),
-                height=220,
+                margin=dict(l=5, r=5, t=5, b=5),
+                height=160,
                 paper_bgcolor='rgba(0,0,0,0)',
-                annotations=[dict(text="Risco<br>Ativo", x=0.5, y=0.5, font_size=14, showarrow=False, font_color="gray")]
+                plot_bgcolor='rgba(0,0,0,0)'
             )
-            st.markdown("<div style='text-align: center; color: #9ca3af; font-size: 0.9em; margin-bottom: 10px;'>Distribuição de Capital (Ordens Abertas)</div>", unsafe_allow_html=True)
             st.plotly_chart(fig_aloc, use_container_width=True)
+            st.markdown(f"<div style='text-align: center; font-size: 0.8em; color: gray; margin-top: -10px;'>Total em Risco: <b>${total_investido_geral:,.0f}</b></div>", unsafe_allow_html=True)
         else:
-            st.info("Sua carteira está 100% líquida (sem posições abertas).")
+            st.info("Carteira 100% Líquida.")
 
     with col_destaques:
-        # Encontrar Herói e Vilão
+        # Lógica dos Destaques
         melhor_ativo = max(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
         pior_ativo = min(dados_ativos.items(), key=lambda x: x[1]['lucro_realizado'], default=(None, None))
         
+        # Lógica do Maior Risco (Exposição)
+        maior_risco = max(dados_ativos.items(), key=lambda x: x[1]['investido_aberto'], default=(None, None))
+        
         st.markdown("##### 🏆 Destaques do Portfólio")
         
-        c_dest1, c_dest2 = st.columns(2)
+        # Agora são 3 colunas para os 3 cards
+        c_dest1, c_dest2, c_dest3 = st.columns(3)
         
         with c_dest1:
             if melhor_ativo[0] and melhor_ativo[1]['lucro_realizado'] > 0:
                 icone_hero = ASSETS_CONFIG.get(melhor_ativo[0], {}).get("icon", "")
                 st.markdown(f"""
-                    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                        <div style="font-size: 0.8em; color: #86efac;">MAIOR LUCRO (HERÓI)</div>
-                        <div style="font-size: 1.4em; font-weight: bold; color: white;">{icone_hero} {melhor_ativo[0]}</div>
+                    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 0.75em; color: #86efac; text-transform: uppercase;">Maior Lucro</div>
+                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_hero} {melhor_ativo[0]}</div>
                         <div style="color: #22c55e; font-weight: bold;">+${melhor_ativo[1]['lucro_realizado']:.2f}</div>
                     </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown("<div style='padding: 15px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.8em;'>Sem lucros ainda</div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding: 12px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Sem lucros</div>", unsafe_allow_html=True)
                 
         with c_dest2:
             if pior_ativo[0] and pior_ativo[1]['lucro_realizado'] < 0:
                 icone_villain = ASSETS_CONFIG.get(pior_ativo[0], {}).get("icon", "")
                 st.markdown(f"""
-                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 15px; border-radius: 8px;">
-                        <div style="font-size: 0.8em; color: #fca5a5;">MAIOR PREJUÍZO (VILÃO)</div>
-                        <div style="font-size: 1.4em; font-weight: bold; color: white;">{icone_villain} {pior_ativo[0]}</div>
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 0.75em; color: #fca5a5; text-transform: uppercase;">Maior Prejuízo</div>
+                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_villain} {pior_ativo[0]}</div>
                         <div style="color: #ef4444; font-weight: bold;">-${abs(pior_ativo[1]['lucro_realizado']):.2f}</div>
                     </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown("<div style='padding: 15px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.8em;'>Sem prejuízos relevantes</div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding: 12px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Sem perdas</div>", unsafe_allow_html=True)
+
+        with c_dest3:
+            if maior_risco[0] and maior_risco[1]['investido_aberto'] > 0:
+                icone_risk = ASSETS_CONFIG.get(maior_risco[0], {}).get("icon", "")
+                st.markdown(f"""
+                    <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 0.75em; color: #fde047; text-transform: uppercase;">Maior Exposição</div>
+                        <div style="font-size: 1.1em; font-weight: bold; color: white;">{icone_risk} {maior_risco[0]}</div>
+                        <div style="color: #eab308; font-weight: bold;">${maior_risco[1]['investido_aberto']:.2f}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='padding: 12px; border: 1px dashed gray; border-radius: 8px; color: gray; font-size: 0.75em; text-align: center;'>Líquido</div>", unsafe_allow_html=True)
 
     # --- ANDAR 2: LISTA DE CARDS DETALHADOS ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### 📜 Detalhes por Ativo")
     
-    ativos_ordenados = sorted(dados_ativos.keys()) # Ordem alfabética
+    ativos_ordenados = sorted(dados_ativos.keys())
     
     for simb in ativos_ordenados:
         stats = dados_ativos[simb]
         
-        # Dados Básicos
         win_rate = (stats['wins'] / stats['trades'] * 100) if stats['trades'] > 0 else 0.0
         cor_lucro = "#22c55e" if stats['lucro_realizado'] >= 0 else "#ef4444"
         sinal_lucro = "+" if stats['lucro_realizado'] >= 0 else ""
+        cor_wr = "#22c55e" if win_rate >= 50 else "#e2e8f0"
+        
         icone = ASSETS_CONFIG.get(simb, {}).get("icon", "🪙")
         
-        # Lógica de Preço Médio (Se tiver posição aberta)
+        # HTML do Preço Médio (Se houver posição)
         html_pm = ""
         if stats['qtd_aberta'] > 0:
             preco_medio = stats['investido_aberto'] / stats['qtd_aberta']
-            cotacao = cotacoes_atuais.get(simb, 0.0) # Pega do dicionário calculado lá em cima
+            cotacao = cotacoes_atuais.get(simb, 0.0)
             
-            # Cor: Verde se preço atual > medio, Vermelho se atual < medio
             cor_status = "#22c55e" if cotacao >= preco_medio else "#ef4444"
             diff_pct = ((cotacao - preco_medio) / preco_medio) * 100
             sinal_diff = "+" if diff_pct >= 0 else ""
             
             html_pm = f"""
-            <div class="asset-stat-box" style="min-width: 140px;">
-                <div class="asset-label">Status Posição</div>
-                <div style="font-size: 0.9em; color: gray;">PM: ${preco_medio:,.2f}</div>
-                <div style="font-size: 1.1em; font-weight: bold; color: {cor_status};">
-                    ${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
-                </div>
-            </div>
-            <div class="vertical-divider"></div>
-            """
+<div class="asset-stat-box" style="min-width: 140px;">
+<div class="asset-label">Status Posição</div>
+<div style="font-size: 0.9em; color: gray;">PM: ${preco_medio:,.2f}</div>
+<div style="font-size: 1.1em; font-weight: bold; color: {cor_status};">
+${cotacao:,.2f} ({sinal_diff}{diff_pct:.1f}%)
+</div>
+</div>
+<div class="vertical-divider"></div>
+"""
         else:
-            html_pm = """
-            <div class="asset-stat-box" style="min-width: 140px;">
-                <div class="asset-label">Status</div>
-                <div style="font-size: 0.9em; color: gray; margin-top: 5px;">Posição Zerada</div>
-            </div>
-            <div class="vertical-divider"></div>
-            """
+            html_pm = f"""
+<div class="asset-stat-box" style="min-width: 140px;">
+<div class="asset-label">Status</div>
+<div style="font-size: 0.9em; color: gray; margin-top: 5px;">Posição Zerada</div>
+</div>
+<div class="vertical-divider"></div>
+"""
 
-        # Renderizar Card
+        # HTML DO CARD WIDE (SEM INDENTAÇÃO PARA CORRIGIR O BUG)
         html_card = f"""
 <div class="asset-row">
-    <div class="asset-identity">
-        <div class="asset-icon-large">{icone}</div>
-        <div class="asset-name-large">{simb}</div>
-    </div>
-    
-    <div class="asset-stats-container">
-        
-        {html_pm}
-        
-        <div class="asset-stat-box">
-            <div class="asset-label">Lucro Realizado</div>
-            <div class="asset-value" style="color: {cor_lucro};">
-                {sinal_lucro}${stats['lucro_realizado']:,.2f}
-            </div>
-        </div>
-        
-        <div class="vertical-divider"></div>
-        
-        <div class="asset-stat-box">
-            <div class="asset-label">Win Rate</div>
-            <div class="asset-value" style="color: #e2e8f0;">{win_rate:.0f}%</div>
-        </div>
-        
-        <div class="vertical-divider"></div>
-        
-        <div class="asset-stat-box">
-            <div class="asset-label">Trades</div>
-            <div class="asset-value" style="color: white;">{stats['trades']}</div>
-        </div>
-    </div>
+<div class="asset-identity">
+<div class="asset-icon-large">{icone}</div>
+<div class="asset-name-large">{simb}</div>
+</div>
+<div class="asset-stats-container">
+{html_pm}
+<div class="asset-stat-box">
+<div class="asset-label">Lucro Realizado</div>
+<div class="asset-value" style="color: {cor_lucro};">
+{sinal_lucro}${stats['lucro_realizado']:,.2f}
+</div>
+</div>
+<div class="vertical-divider"></div>
+<div class="asset-stat-box">
+<div class="asset-label">Win Rate</div>
+<div class="asset-value" style="color: {cor_wr};">{win_rate:.0f}%</div>
+</div>
+<div class="vertical-divider"></div>
+<div class="asset-stat-box">
+<div class="asset-label">Total Trades</div>
+<div class="asset-value" style="color: white;">{stats['trades']}</div>
+</div>
+</div>
 </div>
 """
         st.markdown(html_card, unsafe_allow_html=True)
