@@ -25,7 +25,7 @@ except Exception as e:
 
 # --- CONFIGURAÇÃO DE ATIVOS (MULTIMOEDAS) ---
 ASSETS_CONFIG = {
-    "BTC": {"nome": "Bitcoin", "icon": "🟠", "cor": "#F3BA2F"}, # [AJUSTE 1] Ícone novo
+    "BTC": {"nome": "Bitcoin", "icon": "🟠", "cor": "#F3BA2F"},
     "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
     "SOL": {"nome": "Solana", "icon": "🟣", "cor": "#14F195"},
     "BNB": {"nome": "Binance Coin", "icon": "🟡", "cor": "#F3BA2F"},
@@ -184,43 +184,38 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- ROW 1: SELETOR E CARD "GÊMEO" ---
-            col_sel_1, col_sel_2 = st.columns(2)
-            
-            with col_sel_1:
-                ativo_selecionado = st.selectbox(
-                    "Escolha o Ativo", 
-                    options=list(ASSETS_CONFIG.keys()),
-                    index=0, 
-                    format_func=lambda x: f"{ASSETS_CONFIG[x]['icon']} {x}"
-                )
+            # --- 1. ESCOLHA O ATIVO (Full Width) ---
+            ativo_selecionado = st.selectbox(
+                "Escolha o Ativo", 
+                options=list(ASSETS_CONFIG.keys()),
+                index=0, 
+                format_func=lambda x: f"{ASSETS_CONFIG[x]['icon']} {x}"
+            )
             
             cotacao_atual = obter_cotacao(ativo_selecionado)
             
-            with col_sel_2:
-                # Estrutura visual alinhada
-                st.markdown(f"""
-                    <div>
-                        <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem; font-family: 'Source Sans Pro', sans-serif;">Cotação Atual ({ativo_selecionado})</div>
-                        <div style="
-                            background-color: #0e1117; 
-                            border: 1px solid rgba(250, 250, 250, 0.2); 
-                            border-radius: 0.5rem;
-                            padding: 0 1rem;
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            min-height: 46px; /* Altura do input padrão */
-                        ">
-                            <strong style="font-size: 1.1em; color: #F3BA2F; font-family: monospace;">${cotacao_atual:,.2f}</strong>
-                            <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
-                        </div>
+            # --- 2. COTAÇÃO ATUAL (Full Width - Abaixo do Seletor) ---
+            # Fontes ajustadas para herdar o padrão do sistema (sem fonte customizada)
+            st.markdown(f"""
+                <div style="margin-top: 10px; margin-bottom: 20px;">
+                    <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem;">Cotação Atual ({ativo_selecionado})</div>
+                    <div style="
+                        background-color: #0e1117; 
+                        border: 1px solid rgba(250, 250, 250, 0.2); 
+                        border-radius: 0.5rem;
+                        padding: 0 1rem;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        min-height: 46px; 
+                    ">
+                        <strong style="font-size: 1.1em; color: #F3BA2F;">${cotacao_atual:,.2f}</strong>
+                        <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
                     </div>
-                """, unsafe_allow_html=True)
+                </div>
+            """, unsafe_allow_html=True)
 
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            # --- ROW 2: INPUTS DE VALOR ---
+            # --- 3. INPUTS DE VALOR (Lado a Lado) ---
             c1, c2 = st.columns(2)
             with c1:
                 valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
@@ -309,7 +304,6 @@ with col_boleta:
             if not st.session_state['ordens_abertas']:
                 st.info("Nenhuma ordem aberta no banco de dados.")
             else:
-                # [AJUSTE 3] LISTA MAIS RICA: AGORA MOSTRA O 'PAGO: $...'
                 opcoes_ordens = {l["id"]: f"Ordem #{l.get('display_id', '???')} | {l.get('simbolo', 'BTC')} | Investido: ${l['valor_investido_usdt']:,.2f} | Pago: ${l['preco_compra']:,.2f}" for l in st.session_state['ordens_abertas']}
                 ordem_selecionada = st.selectbox("Selecione a Ordem:", options=list(opcoes_ordens.keys()), format_func=lambda x: opcoes_ordens[x])
                 
@@ -318,10 +312,10 @@ with col_boleta:
                 
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 
-                # Card de cotação alinhado
+                # Card de cotação na aba de venda (Também ajustado a fonte e layout)
                 st.markdown(f"""
-                    <div>
-                        <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem; font-family: 'Source Sans Pro', sans-serif;">Mercado Atual ({simbolo_ativo})</div>
+                    <div style="margin-top: 10px; margin-bottom: 20px;">
+                        <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem;">Mercado Atual ({simbolo_ativo})</div>
                         <div style="
                             background-color: #0e1117; 
                             border: 1px solid rgba(250, 250, 250, 0.2); 
@@ -332,14 +326,12 @@ with col_boleta:
                             justify-content: space-between;
                             min-height: 46px; 
                         ">
-                            <strong style="font-size: 1.1em; color: #F3BA2F; font-family: monospace;">${preco_atual_venda:,.2f}</strong>
+                            <strong style="font-size: 1.1em; color: #F3BA2F;">${preco_atual_venda:,.2f}</strong>
                             <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                st.markdown("<br>", unsafe_allow_html=True)
-
                 preco_venda = st.number_input(f"Cotação da Venda ({simbolo_ativo})", min_value=0.0, step=0.01, format="%.2f", key="preco_venda_input")
                 
                 usar_bnb_venda = st.toggle("Pagar em BNB", value=True, key="toggle_venda_bnb")
@@ -422,9 +414,7 @@ with col_boleta:
                     }
                     
                     try:
-                        # Update seguro usando o ID específico
                         supabase.table("operacoes").update(dados_atualizacao).eq("id", ordem_ativa['id']).execute()
-                        
                         ordem_ativa.update(dados_atualizacao)
                         st.session_state['ordens_abertas'] = [o for o in st.session_state['ordens_abertas'] if o['id'] != ordem_ativa['id']]
                         st.session_state['historico_fechado'].append(ordem_ativa)
@@ -494,9 +484,7 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
-            # Obtém o símbolo da moeda (se não existir, assume BTC)
             simbolo_display = t.get('simbolo', 'BTC')
-            
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -540,7 +528,6 @@ with col_fechados:
             if comp:
                 html_comportamento = f"""<div style="margin-top: 8px; font-size: 0.8em; display: inline-block; padding: 2px 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; color: #e2e8f0;">{comp}</div>"""
             
-            # [AJUSTE 2] BADGE DESTAQUE NAS ORDENS FECHADAS (IGUAL ABERTAS)
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
                 <div style="display: flex; justify-content: space-between;">
