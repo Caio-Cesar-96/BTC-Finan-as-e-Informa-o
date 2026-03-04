@@ -23,13 +23,13 @@ except Exception as e:
     st.error("⚠️ Erro ao conectar com o Banco de Dados. Verifique os Secrets.")
     st.stop()
 
-# --- CONFIGURAÇÃO DE ATIVOS (MULTIMOEDAS) ---
+# --- CONFIGURAÇÃO DE ATIVOS (IMAGENS REAIS / CDN) ---
 ASSETS_CONFIG = {
-    "BTC": {"nome": "Bitcoin", "icon": "🟠", "cor": "#F3BA2F"},
-    "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
-    "SOL": {"nome": "Solana", "icon": "🟣", "cor": "#14F195"},
-    "BNB": {"nome": "Binance Coin", "icon": "🟡", "cor": "#F3BA2F"},
-    "PAXG": {"nome": "PAX Gold", "icon": "🏆", "cor": "#D4AF37"}
+    "BTC": {"nome": "Bitcoin", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png", "cor": "#F3BA2F"},
+    "ETH": {"nome": "Ethereum", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png", "cor": "#627EEA"},
+    "SOL": {"nome": "Solana", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png", "cor": "#14F195"},
+    "BNB": {"nome": "Binance Coin", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png", "cor": "#F3BA2F"},
+    "PAXG": {"nome": "PAX Gold", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/4705.png", "cor": "#D4AF37"}
 }
 
 # --- CSS INSTITUCIONAL ---
@@ -184,33 +184,32 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- 1. ESCOLHA O ATIVO (Full Width) ---
+            # --- 1. ESCOLHA O ATIVO (Texto Limpo no Selectbox) ---
             ativo_selecionado = st.selectbox(
                 "Escolha o Ativo", 
                 options=list(ASSETS_CONFIG.keys()),
                 index=0, 
-                format_func=lambda x: f"{ASSETS_CONFIG[x]['icon']} {x}"
+                format_func=lambda x: f"{ASSETS_CONFIG[x]['nome']} ({x})"
             )
             
             cotacao_atual = obter_cotacao(ativo_selecionado)
+            img_ativo = ASSETS_CONFIG[ativo_selecionado]['image']
             
-            # --- 2. COTAÇÃO ATUAL (Full Width - Abaixo do Seletor) ---
-            # Fontes ajustadas para herdar o padrão do sistema (sem fonte customizada)
+            # --- 2. COTAÇÃO ATUAL VISUAL (Com Logo Real) ---
             st.markdown(f"""
-                <div style="margin-top: 10px; margin-bottom: 20px;">
-                    <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem;">Cotação Atual ({ativo_selecionado})</div>
-                    <div style="
-                        background-color: #0e1117; 
-                        border: 1px solid rgba(250, 250, 250, 0.2); 
-                        border-radius: 0.5rem;
-                        padding: 0 1rem;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        min-height: 46px; 
-                    ">
-                        <strong style="font-size: 1.1em; color: #F3BA2F;">${cotacao_atual:,.2f}</strong>
-                        <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
+                <div style="
+                    display: flex; 
+                    align-items: center; 
+                    background-color: rgba(255,255,255,0.03); 
+                    border: 1px solid rgba(255,255,255,0.05); 
+                    padding: 15px; 
+                    border-radius: 8px; 
+                    margin-bottom: 20px; 
+                    margin-top: 5px;">
+                    <img src="{img_ativo}" style="width: 40px; height: 40px; margin-right: 15px; border-radius: 50%;">
+                    <div>
+                        <div style="font-size: 0.8em; color: #9ca3af; text-transform: uppercase;">Cotação Atual</div>
+                        <div style="font-size: 1.4em; font-weight: bold; color: #F3BA2F;">${cotacao_atual:,.2f}</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -312,22 +311,22 @@ with col_boleta:
                 
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 
-                # Card de cotação na aba de venda (Também ajustado a fonte e layout)
+                img_ativo_venda = ASSETS_CONFIG.get(simbolo_ativo, ASSETS_CONFIG['BTC'])['image']
+
                 st.markdown(f"""
-                    <div style="margin-top: 10px; margin-bottom: 20px;">
-                        <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem;">Mercado Atual ({simbolo_ativo})</div>
-                        <div style="
-                            background-color: #0e1117; 
-                            border: 1px solid rgba(250, 250, 250, 0.2); 
-                            border-radius: 0.5rem;
-                            padding: 0 1rem;
-                            display: flex;
-                            align-items: center;
-                            justify-content: space-between;
-                            min-height: 46px; 
-                        ">
-                            <strong style="font-size: 1.1em; color: #F3BA2F;">${preco_atual_venda:,.2f}</strong>
-                            <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
+                    <div style="
+                        display: flex; 
+                        align-items: center; 
+                        background-color: rgba(255,255,255,0.03); 
+                        border: 1px solid rgba(255,255,255,0.05); 
+                        padding: 15px; 
+                        border-radius: 8px; 
+                        margin-bottom: 20px; 
+                        margin-top: 5px;">
+                        <img src="{img_ativo_venda}" style="width: 40px; height: 40px; margin-right: 15px; border-radius: 50%;">
+                        <div>
+                            <div style="font-size: 0.8em; color: #9ca3af; text-transform: uppercase;">Mercado Atual</div>
+                            <div style="font-size: 1.4em; font-weight: bold; color: #F3BA2F;">${preco_atual_venda:,.2f}</div>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -485,12 +484,15 @@ with col_abertos:
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
             simbolo_display = t.get('simbolo', 'BTC')
+            img_url = ASSETS_CONFIG.get(simbolo_display, ASSETS_CONFIG["BTC"])["image"]
+            
+            # --- CARD COM LOGO EM VEZ DO NOME ---
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <div>
+                    <div style="display: flex; align-items: center;">
                         <strong style="color: white; font-size: 1.1em;">Ordem #{t.get('display_id', '???')}</strong>
-                        <span style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 8px; color: #F3BA2F;">{simbolo_display}</span>
+                        <img src="{img_url}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-left: 10px;" title="{simbolo_display}">
                     </div>
                     <span style="color: #F3BA2F; font-weight: bold;">{t['quantidade_btc']:.6f} {simbolo_display}</span>
                 </div>
@@ -522,17 +524,19 @@ with col_fechados:
             cor_lucro = "#16a34a" if t.get('lucro_usdt', 0) >= 0 else "#dc2626"
             sinal = "+" if t.get('lucro_usdt', 0) >= 0 else ""
             simbolo_display = t.get('simbolo', 'BTC')
+            img_url = ASSETS_CONFIG.get(simbolo_display, ASSETS_CONFIG["BTC"])["image"]
             
             html_comportamento = ""
             comp = t.get('comportamento_final')
             if comp:
                 html_comportamento = f"""<div style="margin-top: 8px; font-size: 0.8em; display: inline-block; padding: 2px 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; color: #e2e8f0;">{comp}</div>"""
             
+            # --- CARD COM LOGO EM VEZ DO NOME ---
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
-                <div style="display: flex; justify-content: space-between;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
                     <strong>Ordem #{t.get('display_id', '???')}</strong>
-                    <span style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; color: #F3BA2F;">{simbolo_display}</span>
+                    <img src="{img_url}" style="width: 24px; height: 24px; border-radius: 50%;" title="{simbolo_display}">
                 </div>
                 Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong><br>
                 <span style="color: gray; font-size: 0.85em;">Taxas: &#36;{t.get('total_taxas_usdt', 0):.4f}</span><br>
