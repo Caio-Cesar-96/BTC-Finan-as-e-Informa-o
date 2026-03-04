@@ -184,32 +184,56 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- 1. ESCOLHA O ATIVO (Texto Limpo no Selectbox) ---
-            ativo_selecionado = st.selectbox(
-                "Escolha o Ativo", 
-                options=list(ASSETS_CONFIG.keys()),
-                index=0, 
-                format_func=lambda x: f"{ASSETS_CONFIG[x]['nome']} ({x})"
-            )
-            
+# --- 1. LÓGICA DE SELEÇÃO PRO (POPOVER) ---
+            # Garante que temos um ativo selecionado na memória
+            if "ativo_boleta" not in st.session_state:
+                st.session_state["ativo_boleta"] = "BTC"
+
+            # Botão de troca (Popover)
+            col_troca, col_vazia = st.columns([2, 3])
+            with col_troca:
+                with st.popover(f"🔁 Trocar Ativo (Atual: {st.session_state['ativo_boleta']})", use_container_width=True):
+                    st.markdown("###### Selecione para operar:")
+                    for ticker, data in ASSETS_CONFIG.items():
+                        # Busca preço rápido para o menu ficar vivo
+                        p_menu = obter_cotacao(ticker) 
+                        # Botão que atualiza o estado e recarrega a página
+                        if st.button(f"{data['nome']} ({ticker}) - ${p_menu:,.2f}", key=f"btn_sel_{ticker}", use_container_width=True):
+                            st.session_state["ativo_boleta"] = ticker
+                            st.rerun()
+
+            # Define as variáveis principais baseadas na seleção
+            ativo_selecionado = st.session_state["ativo_boleta"]
             cotacao_atual = obter_cotacao(ativo_selecionado)
             img_ativo = ASSETS_CONFIG[ativo_selecionado]['image']
-            
-            # --- 2. COTAÇÃO ATUAL VISUAL (Com Logo Real) ---
+            nome_ativo = ASSETS_CONFIG[ativo_selecionado]['nome']
+
+            # --- 2. CARD VISUAL INTEGRADO (O "HEADER" DA BOLETA) ---
             st.markdown(f"""
                 <div style="
                     display: flex; 
                     align-items: center; 
-                    background-color: rgba(255,255,255,0.03); 
-                    border: 1px solid rgba(255,255,255,0.05); 
-                    padding: 15px; 
-                    border-radius: 8px; 
-                    margin-bottom: 20px; 
-                    margin-top: 5px;">
-                    <img src="{img_ativo}" style="width: 40px; height: 40px; margin-right: 15px; border-radius: 50%;">
-                    <div>
-                        <div style="font-size: 0.8em; color: #9ca3af; text-transform: uppercase;">Cotação Atual</div>
-                        <div style="font-size: 1.4em; font-weight: bold; color: #F3BA2F;">${cotacao_atual:,.2f}</div>
+                    background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%); 
+                    border: 1px solid rgba(255,255,255,0.08); 
+                    padding: 20px; 
+                    border-radius: 12px; 
+                    margin-bottom: 25px; 
+                    margin-top: 10px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    
+                    <div style="position: relative;">
+                        <img src="{img_ativo}" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);">
+                        <div style="position: absolute; bottom: 0; right: 0; background: #22c55e; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #0f172a;"></div>
+                    </div>
+                    
+                    <div style="margin-left: 20px; flex-grow: 1;">
+                        <div style="font-size: 0.8em; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Operando Agora</div>
+                        <div style="font-size: 1.6em; font-weight: 800; color: white; line-height: 1.1;">{nome_ativo} <span style="font-size: 0.5em; color: #F3BA2F; vertical-align: middle; background: rgba(243, 186, 47, 0.1); padding: 2px 6px; border-radius: 4px;">{ativo_selecionado}</span></div>
+                    </div>
+
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8em; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Preço de Mercado</div>
+                        <div style="font-size: 1.6em; font-weight: bold; color: #F3BA2F;">${cotacao_atual:,.2f}</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
