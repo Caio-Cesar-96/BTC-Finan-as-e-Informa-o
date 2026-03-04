@@ -23,13 +23,14 @@ except Exception as e:
     st.error("⚠️ Erro ao conectar com o Banco de Dados. Verifique os Secrets.")
     st.stop()
 
-# --- CONFIGURAÇÃO DE ATIVOS (MULTIMOEDAS) ---
+# --- CONFIGURAÇÃO DE ATIVOS (IMAGENS OFICIAIS CDN - ATUALIZADO) ---
+# Substituindo Emojis por Logos Reais e ajustando nomes.
 ASSETS_CONFIG = {
-    "BTC": {"nome": "Bitcoin", "icon": "🟠", "cor": "#F3BA2F"},
-    "ETH": {"nome": "Ethereum", "icon": "💠", "cor": "#627EEA"},
-    "SOL": {"nome": "Solana", "icon": "🟣", "cor": "#14F195"},
-    "BNB": {"nome": "Binance Coin", "icon": "🟡", "cor": "#F3BA2F"},
-    "PAXG": {"nome": "PAX Gold", "icon": "🏆", "cor": "#D4AF37"}
+    "BTC": {"nome": "Bitcoin", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png", "cor": "#F3BA2F"},
+    "ETH": {"nome": "Ethereum", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png", "cor": "#627EEA"},
+    "SOL": {"nome": "Solana", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png", "cor": "#14F195"},
+    "BNB": {"nome": "Binance Coin", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/1839.png", "cor": "#F3BA2F"},
+    "PAXG": {"nome": "PAX Gold", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/4705.png", "cor": "#D4AF37"}
 }
 
 # --- CSS INSTITUCIONAL ---
@@ -184,38 +185,52 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- 1. ESCOLHA O ATIVO (Full Width) ---
+            # --- 1. ESCOLHA O ATIVO (MANTIDO SELECTBOX ORIGINAL) ---
+            # O controle permanece nativo e seguro.
             ativo_selecionado = st.selectbox(
                 "Escolha o Ativo", 
                 options=list(ASSETS_CONFIG.keys()),
                 index=0, 
-                format_func=lambda x: f"{ASSETS_CONFIG[x]['icon']} {x}"
+                format_func=lambda x: f"{ASSETS_CONFIG[x]['nome']} ({x})"
             )
             
+            # Recupera dados para exibição no card estilizado
             cotacao_atual = obter_cotacao(ativo_selecionado)
+            img_ativo = ASSETS_CONFIG[ativo_selecionado]['image']
+            nome_ativo = ASSETS_CONFIG[ativo_selecionado]['nome']
             
-            # --- 2. COTAÇÃO ATUAL (Full Width - Abaixo do Seletor) ---
-            # Fontes ajustadas para herdar o padrão do sistema (sem fonte customizada)
+            # --- 2. CARD PREMIUM ESTILIZADO (ACRESCENTADO ABAIXO DO SELETOR) ---
+            # Este card substitui o visual antigo, mantendo a estética Premium que você gostou.
+            # Não é um botão, apenas a exibição de luxo do ativo selecionado acima.
             st.markdown(f"""
-                <div style="margin-top: 10px; margin-bottom: 20px;">
-                    <div style="font-size: 14px; color: #fafafa; margin-bottom: 0.25rem;">Cotação Atual ({ativo_selecionado})</div>
-                    <div style="
-                        background-color: #0e1117; 
-                        border: 1px solid rgba(250, 250, 250, 0.2); 
-                        border-radius: 0.5rem;
-                        padding: 0 1rem;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        min-height: 46px; 
-                    ">
-                        <strong style="font-size: 1.1em; color: #F3BA2F;">${cotacao_atual:,.2f}</strong>
-                        <span style="color: #888; font-size: 0.8em; font-weight: bold;">USDT</span>
+                <div style="
+                    display: flex; 
+                    align-items: center; 
+                    background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%); 
+                    border: 1px solid rgba(255,255,255,0.08); 
+                    padding: 20px; 
+                    border-radius: 12px; 
+                    margin-bottom: 25px; 
+                    margin-top: 5px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    
+                    <div style="position: relative;">
+                        <img src="{img_ativo}" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);">
+                    </div>
+                    
+                    <div style="margin-left: 20px; flex-grow: 1;">
+                        <div style="font-size: 0.8em; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Operando Agora</div>
+                        <div style="font-size: 1.6em; font-weight: 800; color: white; line-height: 1.1;">{nome_ativo} <span style="font-size: 0.5em; color: #F3BA2F; vertical-align: middle; background: rgba(243, 186, 47, 0.1); padding: 2px 6px; border-radius: 4px;">{ativo_selecionado}</span></div>
+                    </div>
+
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.8em; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Preço de Mercado</div>
+                        <div style="font-size: 1.6em; font-weight: bold; color: #F3BA2F;">${cotacao_atual:,.2f}</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 
-            # --- 3. INPUTS DE VALOR (Lado a Lado) ---
+            # --- 3. INPUTS DE VALOR (MANTIDO INALTERADO) ---
             c1, c2 = st.columns(2)
             with c1:
                 valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
@@ -232,7 +247,7 @@ with col_boleta:
                 </div>
             """, unsafe_allow_html=True)
             
-            # --- AS DUAS CHAVINHAS ---
+            # --- AS DUAS CHAVINHAS (MANTIDO INALTERADO) ---
             col_tog1, col_tog2 = st.columns(2)
             with col_tog1:
                 usar_bnb = st.toggle("Pagar Taxa em BNB", value=True, key="toggle_compra_bnb")
@@ -258,6 +273,7 @@ with col_boleta:
 
             submit_compra = st.button("Executar Compra", type="primary", use_container_width=True)
 
+            # Lógica de inserção (MANTIDO INALTERADO)
             if submit_compra:
                 if valor_total_usdt > 0 and preco_execucao > 0:
                     id_operacao = f"ORD-{int(datetime.datetime.now().timestamp())}"
@@ -424,7 +440,7 @@ with col_boleta:
                         st.error(f"Erro ao fechar ordem no banco: {e}")
 
 with col_simulador:
-    st.subheader("Projeção de Risco e Retorno")
+    st.subheader("Projeção de Risco e Retorno (MANTIDO INALTERADO)")
     st.markdown("<div style='color: gray; font-size: 0.9em; margin-bottom: 15px;'>Calcule os cenários antes de abrir a ordem na corretora.</div>", unsafe_allow_html=True)
     
     val_sim = st.session_state.get('val_compra', 0.0)
@@ -476,7 +492,7 @@ with col_simulador:
 st.divider()
 
 # ==========================================
-# PAINEL INFERIOR 
+# PAINEL INFERIOR (ATUALIZADO COM ÍCONES)
 # ==========================================
 col_abertos, col_fechados = st.columns(2)
 
@@ -484,13 +500,17 @@ with col_abertos:
     st.subheader("🟢 Ordens Abertas")
     if st.session_state['ordens_abertas']:
         for t in reversed(st.session_state['ordens_abertas']):
+            # Recupera o símbolo e a imagem do ativo
             simbolo_display = t.get('simbolo', 'BTC')
+            # Blindagem caso o símbolo não exista na config (usa BTC como padrão seguro)
+            img_url = ASSETS_CONFIG.get(simbolo_display, ASSETS_CONFIG["BTC"])["image"]
+            
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <div>
+                    <div style="display: flex; align-items: center;">
                         <strong style="color: white; font-size: 1.1em;">Ordem #{t.get('display_id', '???')}</strong>
-                        <span style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 8px; color: #F3BA2F;">{simbolo_display}</span>
+                        <img src="{img_url}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-left: 12px;" title="{simbolo_display}">
                     </div>
                     <span style="color: #F3BA2F; font-weight: bold;">{t['quantidade_btc']:.6f} {simbolo_display}</span>
                 </div>
@@ -516,12 +536,14 @@ with col_abertos:
         st.write("Sua carteira está vazia.")
 
 with col_fechados:
-    st.subheader("🎯 Ordens finalizadas")
+    st.subheader("🎯 Ordens Finalizadas")
     if st.session_state['historico_fechado']:
         for t in reversed(st.session_state['historico_fechado'][-3:]):
             cor_lucro = "#16a34a" if t.get('lucro_usdt', 0) >= 0 else "#dc2626"
             sinal = "+" if t.get('lucro_usdt', 0) >= 0 else ""
             simbolo_display = t.get('simbolo', 'BTC')
+            # Blindagem caso o símbolo não exista na config
+            img_url = ASSETS_CONFIG.get(simbolo_display, ASSETS_CONFIG["BTC"])["image"]
             
             html_comportamento = ""
             comp = t.get('comportamento_final')
@@ -530,10 +552,12 @@ with col_fechados:
             
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
-                <div style="display: flex; justify-content: space-between;">
-                    <strong>Ordem #{t.get('display_id', '???')}</strong>
-                    <span style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; color: #F3BA2F;">{simbolo_display}</span>
-                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center;">
+                        <strong>Ordem #{t.get('display_id', '???')}</strong>
+                        <img src="{img_url}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-left: 12px;" title="{simbolo_display}">
+                    </div>
+                    </div>
                 Resultado Líquido: <strong style="color: {cor_lucro};">{sinal}&#36;{t.get('lucro_usdt', 0):.2f} ({sinal}{t.get('lucro_pct', 0):.2f}%)</strong><br>
                 <span style="color: gray; font-size: 0.85em;">Taxas: &#36;{t.get('total_taxas_usdt', 0):.4f}</span><br>
                 {html_comportamento}
@@ -542,7 +566,7 @@ with col_fechados:
     else:
         st.write("Nenhuma venda realizada ainda.")
 
-# === ZONA DE PERIGO ===
+# === ZONA DE PERIGO (MANTIDO INALTERADO) ===
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("🗑️ Zona de Perigo: Apagar Ordens do Banco de Dados"):
     todas_ordens = st.session_state['ordens_abertas'] + st.session_state['historico_fechado']
