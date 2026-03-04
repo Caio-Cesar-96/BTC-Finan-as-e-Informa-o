@@ -32,20 +32,19 @@ ASSETS_CONFIG = {
     "PAXG": {"nome": "PAX Gold", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/4705.png", "cor": "#D4AF37"}
 }
 
-# --- CSS INSTITUCIONAL ---
+# --- CSS INSTITUCIONAL E TRUQUE DO CARD-BOTÃO ---
 st.markdown("""
     <style>
         [data-testid="collapsedControl"] {display: none !important;}
         [data-testid="stSidebar"] {display: none !important;}
         
         [data-testid="stPageLink-NavLink"] {
-            width: 100%;
-            padding: 5px 15px;
-            border-radius: 5px;
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%; padding: 5px 15px; border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
             text-align: center;
         }
+        
+        /* Botões Principais */
         button[kind="primary"] {
             background-color: #F3BA2F !important;
             color: #000000 !important;
@@ -57,6 +56,42 @@ st.markdown("""
             background-color: #DDA221 !important;
             transform: scale(1.02) !important;
         }
+
+        /* TRUQUE: Transformar o botão do Popover em Texto Clicável Gigante */
+        div[data-testid="stPopover"] > button {
+            background-color: transparent !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            color: white !important;
+            font-size: 1.2rem !important;
+            font-weight: 800 !important;
+            text-align: left !important;
+            padding: 10px 15px !important;
+            width: 100% !important;
+            transition: all 0.2s !important;
+        }
+        div[data-testid="stPopover"] > button:hover {
+            border-color: #F3BA2F !important;
+            color: #F3BA2F !important;
+            background-color: rgba(255,255,255,0.05) !important;
+        }
+        /* Ajuste para o ícone de seta do popover */
+        div[data-testid="stPopover"] > button::after {
+            content: " ▾";
+            font-size: 0.8em;
+            color: #9ca3af;
+        }
+
+        /* Container do Card Integrado */
+        .card-integrado {
+            background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            margin-top: 5px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
         .stTabs [data-baseweb="tab-list"] { gap: 10px; }
         .stTabs [data-baseweb="tab"] {
             height: 50px; white-space: pre-wrap;
@@ -158,44 +193,58 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- MENU POPOVER (SUBSTITUI O SELECTBOX) ---
-            col_troca, col_vazia = st.columns([2, 3])
-            with col_troca:
-                with st.popover(f"🔁 Trocar Ativo (Atual: {st.session_state['ativo_boleta']})", use_container_width=True):
-                    st.markdown("###### Selecione para operar:")
-                    for ticker, data in ASSETS_CONFIG.items():
-                        # Botão de seleção dentro do popover
-                        if st.button(f"{data['nome']} ({ticker})", key=f"btn_sel_{ticker}", use_container_width=True):
-                            st.session_state["ativo_boleta"] = ticker
-                            st.rerun()
-
             # Variáveis do ativo selecionado
             ativo_selecionado = st.session_state["ativo_boleta"]
             cotacao_atual = obter_cotacao(ativo_selecionado)
             img_ativo = ASSETS_CONFIG[ativo_selecionado]['image']
             nome_ativo = ASSETS_CONFIG[ativo_selecionado]['nome']
 
-            # --- CARD HEADER VISUAL (COM LOGO REAL) ---
+            # --- CARD INTEGRADO (CARD = LISTA) ---
+            # Aqui criamos um container visual que parece um card único
+            # Mas dentro usamos colunas para colocar o botão 'popover' camuflado
             st.markdown(f"""
-                <div style="
-                    display: flex; align-items: center; 
-                    background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%); 
-                    border: 1px solid rgba(255,255,255,0.08); 
-                    padding: 20px; border-radius: 12px; margin-bottom: 25px; margin-top: 5px;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <div style="position: relative;">
-                        <img src="{img_ativo}" style="width: 50px; height: 50px; border-radius: 50%;">
-                    </div>
-                    <div style="margin-left: 15px; flex-grow: 1;">
-                        <div style="font-size: 0.8em; color: #94a3b8; text-transform: uppercase;">Operando</div>
-                        <div style="font-size: 1.4em; font-weight: 800; color: white;">{nome_ativo}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.8em; color: #94a3b8; text-transform: uppercase;">Mercado</div>
-                        <div style="font-size: 1.4em; font-weight: bold; color: #F3BA2F;">${cotacao_atual:,.2f}</div>
+                <div class="card-integrado">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; width: 15%;">
+                            <img src="{img_ativo}" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);">
+                        </div>
+                        
+                        <div style="text-align: right; width: 30%;">
+                            <div style="font-size: 0.75em; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Mercado</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #F3BA2F;">${cotacao_atual:,.2f}</div>
+                        </div>
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+            
+            # --- AGORA O COMPONENTE REAL DE SELEÇÃO QUE FICA "DENTRO" DO CARD VISUALMENTE ---
+            # Para ficar perfeito, vamos simplificar: O HTML acima desenha fundo e imagem.
+            # O botão abaixo permite a troca.
+            
+            # Vamos fazer o layout "fake" usando colunas nativas para garantir interatividade
+            # Container com estilo de card
+            with st.container():
+                c_logo, c_btn, c_price = st.columns([1, 4, 2], vertical_alignment="center")
+                
+                with c_logo:
+                    st.image(img_ativo, width=60)
+                
+                with c_btn:
+                    # ESTE É O BOTÃO QUE VIRA A LISTA
+                    # O CSS lá em cima deixa ele transparente e com texto grande
+                    with st.popover(f"{nome_ativo} ({ativo_selecionado})", use_container_width=True):
+                        st.markdown("###### Selecione o Ativo:")
+                        for ticker, data in ASSETS_CONFIG.items():
+                            p_menu = obter_cotacao(ticker)
+                            if st.button(f"{data['nome']} | ${p_menu:,.2f}", key=f"sel_{ticker}", use_container_width=True):
+                                st.session_state["ativo_boleta"] = ticker
+                                st.rerun()
+                                
+                with c_price:
+                    st.markdown(f"<div style='text-align:right; font-weight:bold; font-size:1.4em; color:#F3BA2F'>${cotacao_atual:,.2f}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align:right; font-size:0.8em; color:gray'>PREÇO ATUAL</div>", unsafe_allow_html=True)
+            
+            st.markdown("<hr style='margin: 10px 0; opacity: 0.1;'>", unsafe_allow_html=True)
 
             # --- INPUTS ---
             c1, c2 = st.columns(2)
