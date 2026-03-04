@@ -32,19 +32,20 @@ ASSETS_CONFIG = {
     "PAXG": {"nome": "PAX Gold", "image": "https://s2.coinmarketcap.com/static/img/coins/64x64/4705.png", "cor": "#D4AF37"}
 }
 
-# --- CSS INSTITUCIONAL E TRUQUE DO CARD-BOTÃO ---
+# --- CSS E ESTILIZAÇÃO DO "CARD FAKE" ---
 st.markdown("""
     <style>
         [data-testid="collapsedControl"] {display: none !important;}
         [data-testid="stSidebar"] {display: none !important;}
         
+        /* Botões de Navegação */
         [data-testid="stPageLink-NavLink"] {
             width: 100%; padding: 5px 15px; border-radius: 5px;
             background-color: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
             text-align: center;
         }
         
-        /* Botões Principais */
+        /* Botão de Ação Principal (Amarelo) */
         button[kind="primary"] {
             background-color: #F3BA2F !important;
             color: #000000 !important;
@@ -57,60 +58,49 @@ st.markdown("""
             transform: scale(1.02) !important;
         }
 
-        /* TRUQUE: Transformar o botão do Popover em Texto Clicável Gigante */
-        div[data-testid="stPopover"] > button {
-            background-color: transparent !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
+        /* --- O TRUQUE DO CARD INTEGRADO --- */
+        /* 1. Estiliza o Container que envolve as colunas */
+        [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+            /* Isso afeta containers aninhados, cuidado. O código usa st.container com border=False */
+        }
+        
+        /* 2. Transforma o botão do Popover em Texto Grande */
+        div[data-testid="stPopover"] button {
+            background: transparent !important;
+            border: none !important;
             color: white !important;
-            font-size: 1.2rem !important;
+            font-size: 1.5rem !important;
             font-weight: 800 !important;
             text-align: left !important;
-            padding: 10px 15px !important;
-            width: 100% !important;
-            transition: all 0.2s !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
         }
-        div[data-testid="stPopover"] > button:hover {
-            border-color: #F3BA2F !important;
+        div[data-testid="stPopover"] button:hover {
             color: #F3BA2F !important;
-            background-color: rgba(255,255,255,0.05) !important;
         }
-        /* Ajuste para o ícone de seta do popover */
-        div[data-testid="stPopover"] > button::after {
+        /* Adiciona uma setinha pequena depois do nome */
+        div[data-testid="stPopover"] button::after {
             content: " ▾";
-            font-size: 0.8em;
+            font-size: 0.6em;
             color: #9ca3af;
+            vertical-align: middle;
         }
 
-        /* Container do Card Integrado */
-        .card-integrado {
-            background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            margin-top: 5px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        /* Classes Utilitárias */
+        .price-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #F3BA2F;
+            text-align: right;
         }
-
-        .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-        .stTabs [data-baseweb="tab"] {
-            height: 50px; white-space: pre-wrap;
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 5px 5px 0px 0px;
-            padding-top: 10px; padding-bottom: 10px;
+        .price-label {
+            font-size: 0.8em;
+            color: #94a3b8;
+            text-transform: uppercase;
+            text-align: right;
+            letter-spacing: 1px;
         }
-        .stTabs [aria-selected="true"] {
-            background-color: rgba(255, 255, 255, 0.15) !important;
-            border-bottom: 2px solid #F3BA2F !important;
-        }
-        .sim-card {
-            background-color: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 8px;
-            padding: 15px; text-align: center; height: 100%;
-        }
-        .sim-title { color: #9ca3af; font-size: 0.85em; text-transform: uppercase; margin-bottom: 5px; }
-        .sim-val { font-size: 1.4em; font-weight: bold; color: white; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -138,7 +128,7 @@ def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
             else: return "💥 Descontrole"
         else: return "💥 Perda Livre"
 
-# --- FUNÇÕES AUXILIARES ---
+# --- FUNÇÕES ---
 def obter_cotacao(simbolo):
     if not simbolo: return 0.0
     try:
@@ -191,61 +181,52 @@ with col_boleta:
     aba_compra, aba_venda = st.tabs(["Abrir Ordem", "Fechar Ordem"])
     
     with aba_compra:
-        with st.container(border=True):
+        # --- CONTAINER "CARD" CUSTOMIZADO ---
+        # Este container simula o visual do card. Dentro dele usamos widgets nativos.
+        with st.container():
+            st.markdown("""
+                <div style="
+                    border-radius: 12px; 
+                    background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%); 
+                    border: 1px solid rgba(255,255,255,0.08); 
+                    padding: 15px; 
+                    margin-bottom: 20px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            """, unsafe_allow_html=True)
             
-            # Variáveis do ativo selecionado
+            # Recupera estado
             ativo_selecionado = st.session_state["ativo_boleta"]
             cotacao_atual = obter_cotacao(ativo_selecionado)
             img_ativo = ASSETS_CONFIG[ativo_selecionado]['image']
             nome_ativo = ASSETS_CONFIG[ativo_selecionado]['nome']
 
-            # --- CARD INTEGRADO (CARD = LISTA) ---
-            # Aqui criamos um container visual que parece um card único
-            # Mas dentro usamos colunas para colocar o botão 'popover' camuflado
-            st.markdown(f"""
-                <div class="card-integrado">
-                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; width: 15%;">
-                            <img src="{img_ativo}" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);">
-                        </div>
-                        
-                        <div style="text-align: right; width: 30%;">
-                            <div style="font-size: 0.75em; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Mercado</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #F3BA2F;">${cotacao_atual:,.2f}</div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+            # Colunas dentro do "Card"
+            c_img, c_pop, c_price = st.columns([1, 3, 2], vertical_alignment="center")
             
-            # --- AGORA O COMPONENTE REAL DE SELEÇÃO QUE FICA "DENTRO" DO CARD VISUALMENTE ---
-            # Para ficar perfeito, vamos simplificar: O HTML acima desenha fundo e imagem.
-            # O botão abaixo permite a troca.
+            with c_img:
+                st.image(img_ativo, width=60)
             
-            # Vamos fazer o layout "fake" usando colunas nativas para garantir interatividade
-            # Container com estilo de card
-            with st.container():
-                c_logo, c_btn, c_price = st.columns([1, 4, 2], vertical_alignment="center")
-                
-                with c_logo:
-                    st.image(img_ativo, width=60)
-                
-                with c_btn:
-                    # ESTE É O BOTÃO QUE VIRA A LISTA
-                    # O CSS lá em cima deixa ele transparente e com texto grande
-                    with st.popover(f"{nome_ativo} ({ativo_selecionado})", use_container_width=True):
-                        st.markdown("###### Selecione o Ativo:")
-                        for ticker, data in ASSETS_CONFIG.items():
-                            p_menu = obter_cotacao(ticker)
-                            if st.button(f"{data['nome']} | ${p_menu:,.2f}", key=f"sel_{ticker}", use_container_width=True):
-                                st.session_state["ativo_boleta"] = ticker
-                                st.rerun()
-                                
-                with c_price:
-                    st.markdown(f"<div style='text-align:right; font-weight:bold; font-size:1.4em; color:#F3BA2F'>${cotacao_atual:,.2f}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='text-align:right; font-size:0.8em; color:gray'>PREÇO ATUAL</div>", unsafe_allow_html=True)
-            
-            st.markdown("<hr style='margin: 10px 0; opacity: 0.1;'>", unsafe_allow_html=True)
+            with c_pop:
+                # O POPOVER AGORA É SÓ O NOME DO ATIVO (Texto Limpo)
+                # O CSS acima transforma este botão em texto transparente
+                with st.popover(f"{nome_ativo}", use_container_width=True):
+                    st.markdown("###### Trocar Ativo:")
+                    for ticker, data in ASSETS_CONFIG.items():
+                        # Lista interna do popover
+                        p_menu = obter_cotacao(ticker)
+                        if st.button(f"{data['nome']} ({ticker})  |  ${p_menu:,.2f}", key=f"sel_{ticker}", use_container_width=True):
+                            st.session_state["ativo_boleta"] = ticker
+                            st.rerun()
+                st.caption(f"Ticker: {ativo_selecionado}")
 
+            with c_price:
+                st.markdown(f'<div class="price-display">${cotacao_atual:,.2f}</div>', unsafe_allow_html=True)
+                st.markdown('<div class="price-label">Mercado</div>', unsafe_allow_html=True)
+
+            # Fecha a div do card
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with st.container(border=True):
             # --- INPUTS ---
             c1, c2 = st.columns(2)
             with c1: valor_total_usdt = st.number_input("Valor da Operação (USDT)", min_value=0.0, format="%.2f", step=10.0, key="val_compra")
@@ -389,7 +370,7 @@ with col_simulador:
 
 st.divider()
 
-# --- ORDENS LISTAGEM ---
+# --- ORDENS LISTAGEM (COM LOGOS) ---
 col_abertos, col_fechados = st.columns(2)
 with col_abertos:
     st.subheader("🟢 Ordens Abertas")
@@ -402,7 +383,7 @@ with col_abertos:
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                     <div style="display: flex; align-items: center;">
                         <strong style="color: white; margin-right: 10px;">#{t.get('display_id', '???')}</strong>
-                        <img src="{img}" style="width: 20px; height: 20px; border-radius: 50%;">
+                        <img src="{img}" style="width: 24px; height: 24px; border-radius: 50%; vertical-align: middle;">
                     </div>
                     <span style="color: #F3BA2F; font-weight: bold;">{t['quantidade_btc']:.6f} {simb}</span>
                 </div>
@@ -410,6 +391,7 @@ with col_abertos:
             </div>""", unsafe_allow_html=True)
             if t.get('teve_projecao'):
                 st.markdown(f"""<div style="background: rgba(255,255,255,0.03); padding: 5px 15px; border-radius: 0 0 8px 8px; margin-bottom: 10px; border-left: 4px solid #3b82f6; font-size: 0.8em; display: flex; justify-content: space-between;"><span style="color: #22c55e;">🎯 ${t.get('alvo_planejado', 0):,.2f}</span><span style="color: #ef4444;">🛑 ${t.get('stop_planejado', 0):,.2f}</span></div>""", unsafe_allow_html=True)
+            else: st.markdown('<div style="margin-bottom: 10px;"></div>', unsafe_allow_html=True)
     else: st.write("Vazio.")
 
 with col_fechados:
@@ -425,7 +407,7 @@ with col_fechados:
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center;">
                         <strong style="margin-right: 10px;">#{t.get('display_id', '???')}</strong>
-                        <img src="{img}" style="width: 20px; height: 20px; border-radius: 50%;">
+                        <img src="{img}" style="width: 24px; height: 24px; border-radius: 50%;">
                     </div>
                     <strong style="color: {cor};">{('+' if lucro>=0 else '')}${lucro:.2f}</strong>
                 </div>
