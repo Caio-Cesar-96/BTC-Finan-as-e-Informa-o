@@ -271,10 +271,20 @@ with col_boleta:
                 else: st.markdown("<div style='margin-bottom: 5px;'><span style='background-color: rgba(156, 163, 175, 0.1); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold;'>TAXA: 0.100%</span></div>", unsafe_allow_html=True)
                 
                 valor_bruto_venda = float(ordem_ativa['quantidade_btc']) * preco_venda
+                
+                # Inicialização das variáveis para evitar o NameError
+                prev_valor_liquido = 0.0
+                prev_lucro_usdt = 0.0
+                prev_lucro_pct = 0.0
+                sinal_prev = ""
+                cor_prev = "gray"
+                html_veredito = ""
+                
                 if preco_venda > 0:
                     taxa_saida_prev = valor_bruto_venda * (0.00075 if usar_bnb_venda else 0.0010)
-                    lucro_prev = (valor_bruto_venda - taxa_saida_prev) - float(ordem_ativa['valor_investido_usdt'])
-                    lucro_pct_prev = (lucro_prev / float(ordem_ativa['valor_investido_usdt'])) * 100
+                    prev_valor_liquido = valor_bruto_venda - taxa_saida_prev
+                    prev_lucro_usdt = prev_valor_liquido - float(ordem_ativa['valor_investido_usdt'])
+                    prev_lucro_pct = (prev_lucro_usdt / float(ordem_ativa['valor_investido_usdt'])) * 100
                     sinal_prev = "+" if prev_lucro_usdt >= 0 else "-"
                     cor_prev = "#16a34a" if prev_lucro_usdt >= 0 else "#dc2626"
                     
@@ -282,7 +292,6 @@ with col_boleta:
                     if ordem_ativa.get('teve_projecao'):
                         comportamento_prev = avaliar_comportamento(float(ordem_ativa['preco_compra']), preco_venda, float(ordem_ativa.get('alvo_planejado')) if ordem_ativa.get('alvo_planejado') else None, float(ordem_ativa.get('stop_planejado')) if ordem_ativa.get('stop_planejado') else None)
 
-                    html_veredito = ""
                     if comportamento_prev:
                         cor_ver = "#22c55e" if "Sniper" in comportamento_prev else "#eab308" if "Alface" in comportamento_prev else "#ef4444" if "Descontrole" in comportamento_prev else "gray"
                         html_veredito = f"""
@@ -292,12 +301,12 @@ with col_boleta:
                         </div>
                         """
                     
-                    st.markdown(f"""
-                        <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
-                            <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
-                            {html_veredito}
-                        </div>
-                    """, unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
+                        <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
+                        {html_veredito}
+                    </div>
+                """, unsafe_allow_html=True)
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True):
