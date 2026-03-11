@@ -77,7 +77,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# MOTOR MATEMÁTICO (JUIZ) - RESTAURADO ORIGINAL
+# MOTOR MATEMÁTICO (JUIZ)
 # ==========================================
 def avaliar_comportamento(preco_compra, preco_venda, alvo, stop):
     if not alvo and not stop: return None
@@ -154,7 +154,7 @@ with col_boleta:
     with aba_compra:
         with st.container(border=True):
             
-            # --- 1. SELETOR PADRÃO (Sem Bugs) ---
+            # --- 1. SELETOR PADRÃO ---
             ativo_selecionado = st.selectbox(
                 "Escolha o Ativo", 
                 options=list(ASSETS_CONFIG.keys()),
@@ -167,7 +167,7 @@ with col_boleta:
             img_ativo = ASSETS_CONFIG[ativo_selecionado]['image']
             nome_ativo = ASSETS_CONFIG[ativo_selecionado]['nome']
 
-            # --- 2. CARD PREMIUM (HTML Puro e Seguro) ---
+            # --- 2. CARD PREMIUM ---
             st.markdown(f"""
 <div style="display: flex; align-items: center; background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%); border: 1px solid rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; margin-bottom: 25px; margin-top: 5px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
     <div style="position: relative;">
@@ -211,7 +211,6 @@ with col_boleta:
 
             submit_compra = st.button("Executar Compra", type="primary", use_container_width=True)
 
-            # Lógica Original de Inserção
             if submit_compra:
                 if valor_total_usdt > 0 and preco_execucao > 0:
                     id_operacao = f"ORD-{int(datetime.datetime.now().timestamp())}"
@@ -254,7 +253,6 @@ with col_boleta:
                 preco_atual_venda = obter_cotacao(simbolo_ativo)
                 img_ativo_venda = ASSETS_CONFIG.get(simbolo_ativo, ASSETS_CONFIG['BTC'])['image']
 
-                # CARD VISUAL NA VENDA (Visual Seguro)
                 st.markdown(f"""
 <div style="display: flex; align-items: center; background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
     <img src="{img_ativo_venda}" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 15px;">
@@ -272,7 +270,7 @@ with col_boleta:
                 
                 valor_bruto_venda = float(ordem_ativa['quantidade_btc']) * preco_venda
                 
-                # Inicialização das variáveis para evitar o NameError
+                # --- CORREÇÃO DO ERRO DE VARIÁVEL AQUI ---
                 prev_valor_liquido = 0.0
                 prev_lucro_usdt = 0.0
                 prev_lucro_pct = 0.0
@@ -294,19 +292,21 @@ with col_boleta:
 
                     if comportamento_prev:
                         cor_ver = "#22c55e" if "Sniper" in comportamento_prev else "#eab308" if "Alface" in comportamento_prev else "#ef4444" if "Descontrole" in comportamento_prev else "gray"
+                        # --- CORREÇÃO DO VAZAMENTO HTML AQUI (Zero indentação na string) ---
                         html_veredito = f"""
-                        <div style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase;">Projeção de Disciplina:</span>
-                            <strong style="color: {cor_ver}; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; font-size: 0.9em;">{comportamento_prev}</strong>
-                        </div>
-                        """
-                    
+<div style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+    <span style="color: #9ca3af; font-size: 0.85em; text-transform: uppercase;">Projeção de Disciplina:</span>
+    <strong style="color: {cor_ver}; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; font-size: 0.9em;">{comportamento_prev}</strong>
+</div>
+"""
+                
+                # Zero indentação aqui também para garantir
                 st.markdown(f"""
-                    <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
-                        <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
-                        {html_veredito}
-                    </div>
-                """, unsafe_allow_html=True)
+<div style="background-color: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px; margin-top: 15px;">
+    <strong>Retorno Final:</strong> &#36;{prev_valor_liquido:,.2f} <span style="margin: 0 8px; color: rgba(255,255,255,0.2);">|</span> <strong style="color: {cor_prev};">{sinal_prev}&#36;{abs(prev_lucro_usdt):,.2f} ({sinal_prev}{abs(prev_lucro_pct):,.2f}%)</strong>
+    {html_veredito}
+</div>
+""", unsafe_allow_html=True)
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("Executar Venda e Fechar Ordem", type="primary", use_container_width=True):
@@ -361,7 +361,7 @@ with col_simulador:
 st.divider()
 
 # ==========================================
-# PAINEL INFERIOR (LISTAGEM RESTAURADA + ÍCONES)
+# PAINEL INFERIOR
 # ==========================================
 col_abertos, col_fechados = st.columns(2)
 
@@ -372,7 +372,6 @@ with col_abertos:
             simb = t.get('simbolo', 'BTC')
             img = ASSETS_CONFIG.get(simb, ASSETS_CONFIG["BTC"])["image"]
             
-            # --- CARD COM LOGO EM VEZ DO NOME ---
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0px; border-left: 4px solid #3b82f6;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -417,7 +416,6 @@ with col_fechados:
             if comp:
                 html_comportamento = f"""<div style="margin-top: 8px; font-size: 0.8em; display: inline-block; padding: 2px 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; color: #e2e8f0;">{comp}</div>"""
             
-            # --- CARD COM LOGO EM VEZ DO NOME (Restaurada info de taxas e lucro) ---
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border-left: 4px solid {cor_lucro}; margin-bottom: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
